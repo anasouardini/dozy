@@ -9,7 +9,7 @@ Now, it doesn't have to be a problem with your setup for the installation automa
 This will only run a sample script for a quick demo:
 
 ```bash
-sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample;
+sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample
 ```
 
 Instead of `sample` you use a different prefix if it exists in the repo, or you've added it yourself.
