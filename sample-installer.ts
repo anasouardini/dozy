@@ -109,32 +109,6 @@ interface EnvVars {
   driveMounted: boolean,
   internetAvailable: boolean,
 }
-const envVars: EnvVars = {
-  driveAttached: true,
-  driveMounted: true,
-  internetAvailable: true,
-}
-const checkEnv = () => {
-  // do some checks here
-  return {
-    allSet: true,
-    env: envVars
-  }
-};
-
-const loadEnv = () => {
-  print.info("checking environment...");
-  if (!checkEnv().allSet) {
-    // setup env here
-  }
-
-  const env = checkEnv();
-  if (!env.allSet) {
-    return env;
-  }
-
-  return env;
-}
 
 // ------------------------------------------------------------------
 // ----------------------------- STEPS ------------------------------
@@ -152,9 +126,10 @@ type Steps = {
 };
 const steps: Steps[] = [
   {
-    title: "this is a sample installer.",
+    title: "this is a sample installer step.",
     substeps: [
       {
+        title: "this is a sample installer echo command.",
         cmd: ["echo 'this is a sample installer'"],
       },
     ],
@@ -321,15 +296,6 @@ const main = async () => {
   }
 
   // the default action: when no arguments were passed
-
-  print.info("setting up environment...");
-  const env = loadEnv();
-  console.log(env);
-  if (!env.allSet) {
-    print.error(`The environment wasn't setup`)
-    process.exit(1);
-  }
-
   await runSteps();
 };
 
