@@ -35,8 +35,8 @@ fi
 echo "download post-installation script";
 installerPath="./${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
-  echo "The file: '${installerPath}' is going to be removed.\n \e[31mCtrl+C\e[0m to cancel or \e[32mEnter\e[0m to continue.";
-  read dummy;
+  echo "The file: '${installerPath}' is going to be removed.";
+  read -p "\e[31mCtrl+C\e[0m to cancel or \e[32mEnter\e[0m to continue: " dummy;
   rm -rf $installerPath;
 fi
 
