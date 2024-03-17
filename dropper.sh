@@ -1,5 +1,7 @@
 #!/bin/bash
 
+host="https://postinstaller.netlify.app";
+
 # check args
 if [ -z $1 ]; then
   echo "You haven't provided a username that was prefixed to your installer script!\n E.g: 'sample'";
@@ -28,11 +30,11 @@ export PATH="$PATH:$HOME/.deno/bin/"
 
 #------------ run the installer TS script
 echo "download encrypted post-installation script";
-installerPath="./${githubUsername}-installer.ts";
+installerPath="${host}/${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
   echo "Are you sure you want to replace the old installer: '${installerPath}'? if so, hit any key.";
   read dummy;
 fi
-curl -fsSL "https://postinstaller.anasouardini.online/${githubUsername}-installer.ts" -o $installerPath;
+curl -fsSL "/${githubUsername}-installer.ts" -o $installerPath;
 echo "running the post-installation script";
 deno run --allow-all $installerPath;
