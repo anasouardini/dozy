@@ -35,8 +35,7 @@ fi
 echo "download encrypted post-installation script";
 installerPath="./${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
-  echo "the file: '${installerPath}'is going to be removed. [Enter=yes]";
-  read dummy;
+  read -p "the file: '${installerPath}'is going to be removed. [Enter=yes]" dummy;
   echo $dummy > /dev/null;
   rm -rf $installerPath;
 fi
