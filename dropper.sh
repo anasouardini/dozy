@@ -32,11 +32,11 @@ if [ ! $? -eq 0 ]; then
 fi
 
 #------------ run the installer TS script
-echo "download encrypted post-installation script";
+echo "download post-installation script";
 installerPath="./${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
-  read -p "the file: '${installerPath}'is going to be removed. [Enter=yes]" dummy;
-  echo $dummy > /dev/null;
+  echo "The file: '${installerPath}' is going to be removed. Ctrl+C to cancel or Enter to continue.";
+  read dummy;
   rm -rf $installerPath;
 fi
 
