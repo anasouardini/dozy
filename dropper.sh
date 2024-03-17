@@ -28,6 +28,11 @@ export PATH="$PATH:$HOME/.deno/bin/"
 
 #------------ run the installer TS script
 echo "download encrypted post-installation script";
-curl -fsSL "https://postinstaller.anasouardini.online/${githubUsername}-installer.ts" -o installer.ts;
+installerPath="./${githubUsername}-installer.ts";
+if [ -f $installerPath ]; then
+  echo "Are you sure you want to replace the old installer: '${installerPath}'? if so, hit any key.";
+  read dummy;
+fi
+curl -fsSL "https://postinstaller.anasouardini.online/${githubUsername}-installer.ts" -o $installerPath;
 echo "running the post-installation script";
-deno run --allow-all ./installer.ts;
+deno run --allow-all $installerPath;
