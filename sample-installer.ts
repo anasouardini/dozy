@@ -152,14 +152,30 @@ type Steps = {
 };
 const steps: Steps[] = [
   {
-    title: "Wrapper for apt, a better way of installing packages.",
+    title: "this is a sample installer.",
     substeps: [
       {
-        apps: ["nala"],
+        cmd: ["echo 'this is a sample installer'"],
       },
     ],
   },
+
   // add more steps here
+
+  // ===== EXAMPLE SYNTAX
+  // {
+  //   title: "Updating sources and packages",
+  //   substeps: [
+  //     {
+  //       title: "installing better apt interface",
+  //       apps: ["nala"],
+  //     },
+  //     {
+  //       title: "updating and upgrading",
+  //       cmd: ["sudo apt update -y && sudo apt upgrade -y"],
+  //     },
+  //   ],
+  // },
 ];
 
 // these are printed after post-installation
