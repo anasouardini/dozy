@@ -8,14 +8,16 @@ fi
 githubUsername=$1;
 
 # make sure curl is there
-if ! command -v curl &>/dev/null; then
+command -v curl;
+if [[ ! $? = 0 ]]; then
   echo "installing curl";
   sudo apt install curl -y
 fi
 
 #-------- install deno
 # deno needs unzip to install itself
-if ! command -v unzip &>/dev/null; then
+command -v unzip;
+if [[ ! $? = 0 ]]; then
   echo "installing unzip";
   sudo apt install unzip -y
 fi
