@@ -35,9 +35,12 @@ fi
 echo "download encrypted post-installation script";
 installerPath="./${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
-  echo "Are you sure you want to replace the old installer: '${installerPath}'? if so, hit any key.";
+  echo "the file: '${installerPath}'is going to be removed. [Enter=yes]";
   read dummy;
+  echo $dummy > /dev/null;
+  rm -rf $installerPath;
 fi
+
 curl -fsSL "${host}/${githubUsername}-installer.ts" -o $installerPath;
 echo "running the post-installation script";
 deno run --allow-all $installerPath;
