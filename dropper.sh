@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # check args
-if [[ -z $1 ]]; then
+if [ -z $1 ]; then
   echo "You haven't provided a username that was prefixed to your installer script!\n E.g: 'sample'";
   exit 1;
 fi
@@ -9,7 +9,7 @@ githubUsername=$1;
 
 # make sure curl is there
 command -v curl;
-if [[ ! $? = 0 ]]; then
+if [ ! $? -eq 0 ]; then
   echo "installing curl";
   sudo apt install curl -y
 fi
@@ -17,7 +17,7 @@ fi
 #-------- install deno
 # deno needs unzip to install itself
 command -v unzip;
-if [[ ! $? = 0 ]]; then
+if [ ! $? -eq 0 ]; then
   echo "installing unzip";
   sudo apt install unzip -y
 fi
