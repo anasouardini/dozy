@@ -17,7 +17,7 @@ if ! command -v unzip &>/dev/null; then
 fi
 
 echo "running the deno installer";
-curl -fsSL https://deno.land/x/install/install.sh | bash
+curl -fsSL https://deno.land/x/install/install.sh | sh
 export PATH="$PATH:$HOME/.deno/bin/"
 
 #------------ run the installer TS script
