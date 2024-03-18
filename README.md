@@ -12,6 +12,6 @@ This will only run a sample script for a quick demo:
 sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample
 ```
 
-Instead of `sample` you use a different prefix if it exists in the repo, or you've added it yourself.
+Instead of `sample` you use a different prefix if it exists in the repo like `anasouardini`, or you've added it yourself.
 
-Feel free to add your own installation script to this repository.
+el free to add your own installation script to this repository.
