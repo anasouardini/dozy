@@ -26,7 +26,7 @@ if [ ! $? -eq 0 ]; then
   sudo apt install unzip -y
 fi
 
-command -v deno > /dev/null 2>&1;
+ls $HOME/.deno/bin/deno > /dev/null 2>&1;
 if [ ! $? -eq 0 ]; then
   echo "running the deno installer";
   curl -fsSL https://deno.land/x/install/install.sh | sh
@@ -44,4 +44,4 @@ fi
 
 curl -fsSL "${host}/${githubUsername}-installer.ts" -o $installerPath;
 echo "running the post-installation script";
-deno run --allow-all $installerPath $installerArgs;
+$HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;
