@@ -17,7 +17,7 @@ const config = {
       path: '$HOME/.dotfiles'
     }
   },
-  dryRun: true,
+  dryRun: false,
   user: {
     name: 'venego'
   },
