@@ -247,6 +247,11 @@ const steps: Steps[] = [
   },
   {
     category: "common",
+    title: "stopper",
+    substeps: []
+  },
+  {
+    category: "common",
     title: "restore config",
     substeps: [
       {
@@ -835,6 +840,9 @@ async function runSteps() {
   const stepsList = steps;
   for (let stepIndex = 0; stepIndex < stepsList.length; stepIndex++) {
     const step = stepsList[stepIndex];
+    if(step.title == 'stopper'){
+      process.exit(0);
+    }
 
     if (
       step.category !== config.defaults.template &&
