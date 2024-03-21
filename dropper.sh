@@ -8,6 +8,8 @@ if [ -z $1 ]; then
   exit 1;
 fi
 githubUsername=$1;
+shift;
+installerArgs=$@;
 
 # make sure curl is there
 command -v curl > /dev/null 2>&1;
@@ -42,4 +44,4 @@ fi
 
 curl -fsSL "${host}/${githubUsername}-installer.ts" -o $installerPath;
 echo "running the post-installation script";
-deno run --allow-all $installerPath;
+deno run --allow-all $installerPath $installerArgs;
