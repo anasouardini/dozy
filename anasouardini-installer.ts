@@ -232,16 +232,40 @@ const steps: Steps[] = [
     substeps: [
       {
         title: "updating and upgrading",
-        cmd: ["sudo apt update -y && sudo apt upgrade -y"],
+        cmd: ["sudo apt update -y"],
       },
+    ],
+  },
+  {
+    category: "common",
+    title: "installing apt config dependencies",
+    substeps: [
+      {
+        apps: ["rsync"],
+      },
+    ],
+  },
+  {
+    category: "common",
+    title: "restore config",
+    substeps: [
       {
         title: "restore apt config",
         cmd: [
           `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
+        ]
+      },
+      {
+        title: "restore keyrings for apt",
+        cmd: [
           `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
           `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/.local/share/keyrings $HOME/.local/share/`,
         ]
-      }
+      },
+      {
+        title: "updating repositories",
+        cmd: ["sudo apt update -y;"],
+      },
     ],
   },
   {
