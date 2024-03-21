@@ -947,23 +947,22 @@ const main = async () => {
     if (options?.[args.option]) {
       // console.log(args.optionArgs)
       options[args.option](args.optionArgs);
+    } else {
+      // the default action: when no arguments were passed
+
+      if (args.option != 'no-check') {
+        print.info("setting up environment...");
+        const env = loadEnv();
+        console.log(env);
+        if (!env.allSet) {
+          print.error(`The environment wasn't setup`)
+          process.exit(1);
+        }
+      }
+
+      await runSteps();
     }
-    return;
   }
-
-  // the default action: when no arguments were passed
-
-  if (args.option != 'no-check') {
-    print.info("setting up environment...");
-    const env = loadEnv();
-    console.log(env);
-    if (!env.allSet) {
-      print.error(`The environment wasn't setup`)
-      process.exit(1);
-    }
-  }
-
-  await runSteps();
 };
 
 // ----------------- ENTRY POINT
