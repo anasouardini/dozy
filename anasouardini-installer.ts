@@ -912,12 +912,13 @@ async function runSteps() {
 
 const args = {
   length: process.args.length,
-  option: process.args[0],
+  // option: process.args[1], // in nodejs
+  option: process.args[0] as string, // in deno
   //? args should be like "node thing.js option argKey:argValue"
   optionArgs: process.args
     .slice(1)
     .reduce((accumulator: {}, optionArg: string) => {
-      const optionArgTupal = optionArg.split("=");
+      const optionArgTupal = optionArg.split(":");
       accumulator = { ...accumulator, [optionArgTupal[0]]: optionArgTupal[1] };
       return accumulator;
     }, {}),
@@ -952,12 +953,14 @@ const main = async () => {
 
   // the default action: when no arguments were passed
 
-  print.info("setting up environment...");
-  const env = loadEnv();
-  console.log(env);
-  if (!env.allSet) {
-    print.error(`The environment wasn't setup`)
-    process.exit(1);
+  if (args.option != 'no-check') {
+    print.info("setting up environment...");
+    const env = loadEnv();
+    console.log(env);
+    if (!env.allSet) {
+      print.error(`The environment wasn't setup`)
+      process.exit(1);
+    }
   }
 
   await runSteps();
