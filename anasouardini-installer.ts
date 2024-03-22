@@ -565,12 +565,12 @@ const steps: Steps[] = [
       {
         title: "installing keyboard key mapper (keyd)",
         cmd: [
-          `mkdir -p $HOME/Downloads; cd $HOME/Downloads \\
-          git clone https://github.com/rvaiya/keyd \\
-          sudo apt install gcc make -y \\
-          cd keyd \\
-          make && sudo make install \\
-          sudo systemctl enable keyd && sudo systemctl start keyd`,
+          `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
+          git clone https://github.com/rvaiya/keyd; \\
+          sudo apt install gcc make -y; \\
+          cd keyd; \\
+          make && sudo make install; \\
+          sudo systemctl enable keyd && sudo systemctl start keyd;`,
         ],
       },
     ],
@@ -776,6 +776,12 @@ const steps: Steps[] = [
     category: "common",
     title: "setting up dotfiles",
     substeps: [
+      {
+        title: "restore ssh keys",
+        cmd: [
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/venego/.ssh $HOME/`,
+        ],
+      },
       {
         title: "backing up any old .dotfiles",
         cmd: [`[ -d ${config.bkp.dotfiles.path} ] && mv ${config.bkp.dotfiles.path} ${config.bkp.dotfiles.path}-bkp`],
