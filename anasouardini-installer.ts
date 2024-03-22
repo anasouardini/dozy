@@ -247,24 +247,19 @@ const steps: Steps[] = [
   },
   {
     category: "common",
-    title: "stopper",
-    substeps: []
-  },
-  {
-    category: "common",
     title: "restore config",
     substeps: [
       {
         title: "restore apt config",
         cmd: [
-          `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
         ]
       },
       {
         title: "restore keyrings for apt",
         cmd: [
-          `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
-          `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/.local/share/keyrings $HOME/.local/share/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/.local/share/keyrings $HOME/.local/share/`,
         ]
       },
       {
@@ -272,6 +267,11 @@ const steps: Steps[] = [
         cmd: ["sudo apt update -y;"],
       },
     ],
+  },
+  {
+    category: "common",
+    title: "stopper",
+    substeps: []
   },
   {
     category: "common",
