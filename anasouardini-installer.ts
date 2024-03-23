@@ -259,6 +259,7 @@ const steps: Steps[] = [
         title: "restore keyrings for apt",
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
+          `mkdir -p $HOME/.local.share;`,
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/.local/share/keyrings $HOME/.local/share/`,
         ]
       },
@@ -280,7 +281,7 @@ const steps: Steps[] = [
       {
         title: "copy mouse/keyboard config over",
         cmd: [
-          `rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`
         ]
       }
     ],
@@ -765,13 +766,15 @@ const steps: Steps[] = [
     ],
   },
   {
-    // TODO: syncing home files from home server
-    enabled: false,
-    title: "syncing home files from home server",
+    title: "syncing/restore files from bkp drive",
     category: "desktop",
     substeps: [
       {
-        cmd: [],
+        cmd: [
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home $HOME`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.config $HOME`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.vscode $HOME`,
+        ],
       },
     ],
   },
@@ -796,16 +799,10 @@ const steps: Steps[] = [
         ],
       },
       {
-        title: "adding both homeServer and github remotes",
-        cmd: [
-          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME remote add origin ${config.bkp.repo.sshUrl}`,
-        ],
-      },
-      {
         title: `checkout ${config.bkp.dotfiles.path} after backing up existing dotfiles`,
         cmd: [
           `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout \\
-          if [[ $? -eq 0 ]]; then \\
+          if [[ $? -eq 0 ]];then \\
             echo "Checked out config successfully." \\
           else \\
             echo "Backing up pre-existing dot files, to not ovverride them." \\
@@ -824,14 +821,14 @@ const steps: Steps[] = [
         ],
       },
     ],
-  },
+  }
 ];
-
-// TODO: disable password for reboot and shutdown
-//     'add the following to /etc/sudoers:',
-//     '%venego ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt'
+// todo: install lazygit
 
 const manualSteps = [
+  "disable password for reboot and shutdown",
+  " - add the following to /etc/sudoers:",
+  " - %venego ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt",
   "re-login for the default shell to be set",
   "add core2 (home server) to /etc/hosts",
   "edit grub (reduce tiemout)",
@@ -849,7 +846,7 @@ async function runSteps() {
   const stepsList = steps;
   for (let stepIndex = 0; stepIndex < stepsList.length; stepIndex++) {
     const step = stepsList[stepIndex];
-    if(step.title == 'stopper'){
+    if (step.title == 'stopper') {
       process.exit(0);
     }
 
