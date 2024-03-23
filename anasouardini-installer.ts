@@ -570,7 +570,10 @@ const steps: Steps[] = [
           sudo apt install gcc make -y; \\
           cd keyd; \\
           make && sudo make install; \\
-          sudo systemctl enable keyd && sudo systemctl start keyd;`,
+          sudo systemctl enable keyd && sudo systemctl start keyd; \\
+          sudo usermod -aG keyd $USER; \\
+          sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/keyd/default.conf /etc/keyd/;
+          `,
         ],
       },
     ],
