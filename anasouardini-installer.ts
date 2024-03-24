@@ -784,9 +784,12 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home $HOME`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.config $HOME`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.vscode $HOME`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/* $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/home $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.config $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.vscode $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.gnupg $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.password-store $HOME/;`,
         ],
       },
     ],
