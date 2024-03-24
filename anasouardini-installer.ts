@@ -259,8 +259,8 @@ const steps: Steps[] = [
         title: "restore keyrings for apt",
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
-          `mkdir -p $HOME/.local.share;`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/.local/share/keyrings $HOME/.local/share/`,
+          `mkdir -p $HOME/.local/share;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.local/share/keyrings $HOME/.local/share/`,
         ]
       },
       {
@@ -764,7 +764,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `rm -rf Public Videos Templates Pictures Music Documents Desktop`,
+          `cd $HOME && sudo rm -rf Public Videos Templates Pictures Music Documents Desktop`,
         ],
       },
     ],
@@ -784,8 +784,8 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/* $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/${config.user.name}/home $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/* $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.config $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.vscode $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.gnupg $HOME/;`,
@@ -801,7 +801,7 @@ const steps: Steps[] = [
       {
         title: "restore ssh keys",
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/venego/.ssh $HOME/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.ssh $HOME/`,
         ],
       },
       {
@@ -817,17 +817,7 @@ const steps: Steps[] = [
       {
         title: `checkout ${config.bkp.dotfiles.path} after backing up existing dotfiles`,
         cmd: [
-          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout \\
-          if [[ $? -eq 0 ]];then \\
-            echo "Checked out config successfully." \\
-          else \\
-            echo "Backing up pre-existing dot files, to not ovverride them." \\
-            mkdir -p .dotfiles-backup \\
-            git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout 2>&1 | egrep "\s+\." | awk {'print $1'} | xargs -I{} mv {} .dotfiles-backup/{} \\
-            # git-checkout dotfiles for the repo \\
-            git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout -f \\
-            echo "Checked out config successfully." \\
-          fi`,
+          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout -f;`
         ],
       },
       {
@@ -844,7 +834,7 @@ const steps: Steps[] = [
 const manualSteps = [
   "disable password for reboot and shutdown",
   " - add the following to /etc/sudoers:",
-  " - %venego ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt",
+  " - %username ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt",
   "re-login for the default shell to be set",
   "add core2 (home server) to /etc/hosts",
   "edit grub (reduce tiemout)",
