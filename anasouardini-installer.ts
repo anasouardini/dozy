@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from 'node:fs';
 
 const process = Deno;
 
@@ -11,21 +11,18 @@ const config = {
     drive: { serial: 'ZA465ASK', mountPath: '/media/D' },
     repo: {
       webUrl: 'https://github.com/anasouardini/dotfiles.git',
-      sshUrl: 'git@github.com:anasouardini/dotfiles.git'
+      sshUrl: 'git@github.com:anasouardini/dotfiles.git',
     },
     dotfiles: {
-      path: '$HOME/.dotfiles'
-    }
+      path: '$HOME/.dotfiles',
+    },
   },
   dryRun: false,
-  user: {
-    name: 'venego'
-  },
   path: {
-    log: "postInstallation.log",
+    log: 'postInstallation.log',
   },
   defaults: {
-    template: "desktop",
+    template: 'desktop',
   },
 };
 
@@ -34,10 +31,10 @@ const config = {
 // --------------------------------------------------------------------
 
 interface Print {
-  title: (msg: string) => void,
-  error: (msg: string) => void,
-  success: (msg: string) => void,
-  info: (msg: string) => void,
+  title: (msg: string) => void;
+  error: (msg: string) => void;
+  success: (msg: string) => void;
+  info: (msg: string) => void;
 }
 const print: Print = {
   title: (msg: string) => {
@@ -74,7 +71,7 @@ const log = ({
       config.path.log,
       `\n-----------------------------------------------------------------------------------------------
        \n------------------->> ${new Date().toISOString()} - installation start <<----------------------\n
-        ------------------------------------------------------------------------------------------------\n`
+        ------------------------------------------------------------------------------------------------\n`,
     );
     logVars.logSessionMarked = true;
   }
@@ -84,32 +81,34 @@ const log = ({
   }
   fs.appendFileSync(
     config.path.log,
-    `\n------------------->> ${new Date().toISOString()} - ${orderStr}\n${title}\n${msg}\n<<----------------------\n`
+    `\n------------------->> ${new Date().toISOString()} - ${orderStr}\n${title}\n${msg}\n<<----------------------\n`,
   );
 };
 
 const sleep = (t: number) => new Promise((resolve) => setTimeout(resolve, t));
 
 const command = (cmd: string, printOutput: boolean = false) => {
-  const output = new process.Command("bash", { args: ["-c", cmd] }).outputSync();
+  const output = new process.Command('bash', {
+    args: ['-c', cmd],
+  }).outputSync();
 
   const decoder = new TextDecoder();
   const stderr = decoder.decode(output.stderr);
   const stdout = decoder.decode(output.stdout);
 
   if (printOutput) {
-    console.log("stdout:", stdout);
+    console.log('stdout:', stdout);
   }
 
   if (stderr) {
     //* some warnings are outputed as errors.
-    const falsePositives = ["warning"];
+    const falsePositives = ['warning'];
     if (
       falsePositives.some((item) =>
-        stderr.toLowerCase().includes(item.toLocaleLowerCase())
+        stderr.toLowerCase().includes(item.toLocaleLowerCase()),
       )
     ) {
-      console.log("IMPORTANT (I guess) => " + stderr);
+      console.log('IMPORTANT (I guess) => ' + stderr);
       return;
     }
 
@@ -118,15 +117,15 @@ const command = (cmd: string, printOutput: boolean = false) => {
 };
 
 interface EnvVars {
-  driveAttached: boolean,
-  driveMounted: boolean,
-  internetAvailable: boolean,
+  driveAttached: boolean;
+  driveMounted: boolean;
+  internetAvailable: boolean;
 }
 const envVars: EnvVars = {
   driveAttached: true,
   driveMounted: true,
   internetAvailable: true,
-}
+};
 const checkEnv = () => {
   try {
     command(`
@@ -171,12 +170,12 @@ const checkEnv = () => {
 
   return {
     allSet: Object.values(envVars).every((val) => val == true),
-    env: envVars
-  }
+    env: envVars,
+  };
 };
 
 const loadEnv = () => {
-  print.info("checking environment...");
+  print.info('checking environment...');
   if (!checkEnv().allSet) {
     if (envVars.driveAttached && !envVars.driveMounted) {
       try {
@@ -197,7 +196,7 @@ const loadEnv = () => {
         `);
         envVars.driveMounted = true;
       } catch (err) {
-        console.log(err)
+        console.log(err);
       }
     }
   }
@@ -208,7 +207,7 @@ const loadEnv = () => {
   }
 
   return env;
-}
+};
 
 // ------------------------------------------------------------------
 // ----------------------------- STEPS ------------------------------
@@ -216,7 +215,7 @@ const loadEnv = () => {
 
 type Steps = {
   enabled?: boolean;
-  category: "common" | "homeServer" | "desktop" | "termux";
+  category: 'common' | 'homeServer' | 'desktop' | 'termux';
   title: string;
   substeps: {
     enabled?: boolean;
@@ -227,78 +226,78 @@ type Steps = {
 };
 const steps: Steps[] = [
   {
-    category: "common",
-    title: "Updating sources and packages",
+    category: 'common',
+    title: 'Updating sources and packages',
     substeps: [
       {
-        title: "updating and upgrading",
-        cmd: ["sudo apt update -y"],
+        title: 'updating and upgrading',
+        cmd: ['sudo apt update -y'],
       },
     ],
   },
   {
-    category: "common",
-    title: "installing apt config dependencies",
+    category: 'common',
+    title: 'installing apt config dependencies',
     substeps: [
       {
-        apps: ["rsync"],
+        apps: ['rsync'],
       },
     ],
   },
   {
-    category: "common",
-    title: "restore config",
+    category: 'common',
+    title: 'restore config',
     substeps: [
       {
-        title: "restore apt config",
+        title: 'restore apt config',
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
-        ]
+        ],
       },
       {
-        title: "restore keyrings for apt",
+        title: 'restore keyrings for apt',
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
           `mkdir -p $HOME/.local/share;`,
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.local/share/keyrings $HOME/.local/share/`,
-        ]
+        ],
       },
       {
-        title: "updating repositories",
-        cmd: ["sudo apt update -y;"],
+        title: 'updating repositories',
+        cmd: ['sudo apt update -y;'],
       },
     ],
   },
   {
-    category: "common",
-    title: "stopper",
-    substeps: []
+    category: 'common',
+    title: 'stopper',
+    substeps: [],
   },
   {
-    category: "common",
-    title: "mouse/kb setup",
+    category: 'common',
+    title: 'mouse/kb setup',
     substeps: [
       {
-        title: "copy mouse/keyboard config over",
+        title: 'copy mouse/keyboard config over',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`
-        ]
-      }
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`,
+        ],
+      },
     ],
   },
   {
-    category: "common",
-    title: "Wrapper for apt, a better way of installing packages.",
+    category: 'common',
+    title: 'Wrapper for apt, a better way of installing packages.',
     substeps: [
       {
-        apps: ["nala"],
+        apps: ['nala'],
       },
     ],
   },
   {
     enabled: false,
-    category: "common",
-    title: "bluetooth setup",
+    category: 'common',
+    title: 'bluetooth setup',
     substeps: [
       /////////////////////////////////// bluetooth
       //// these might be needed
@@ -313,36 +312,36 @@ const steps: Steps[] = [
 
       {
         apps: [
-          "bluez",
-          "bluez-tools",
-          "pulseaudio-module-bluetooth",
-          "pipewire",
-          "pipewire-pulse",
+          'bluez',
+          'bluez-tools',
+          'pulseaudio-module-bluetooth',
+          'pipewire',
+          'pipewire-pulse',
         ],
       },
     ],
   },
   {
-    category: "common",
-    title: "net stuff",
+    category: 'common',
+    title: 'net stuff',
     substeps: [
       {
         apps: [
-          "network-manager",
+          'network-manager',
           // "wondershaper",
-          "wget",
-          "curl",
-          "arp-scan",
-          "sshfs",
+          'wget',
+          'curl',
+          'arp-scan',
+          'sshfs',
         ],
       },
       {
         enabled: false,
         apps: [
-          "netplan.io",
+          'netplan.io',
           // "dsniff",
-          "proftpd",
-          "hping3",
+          'proftpd',
+          'hping3',
           // "speedtest-cli",
           // "macchanger", // can't install unattendenly
         ],
@@ -351,40 +350,40 @@ const steps: Steps[] = [
   },
   {
     enabled: false,
-    category: "common",
-    title: "tools for building source files",
+    category: 'common',
+    title: 'tools for building source files',
     substeps: [
       {
-        apps: ["build-essential", "libx11-dev", "gcc", "make", "cmake"],
+        apps: ['build-essential', 'libx11-dev', 'gcc', 'make', 'cmake'],
       },
     ],
   },
   {
-    category: "desktop",
-    title: "X11 related stuff",
+    category: 'desktop',
+    title: 'X11 related stuff',
     substeps: [
       {
         apps: [
-          "xorg",
-          "xinput",
-          "arandr",
-          "xdo",
-          "xdotool",
-          "xclip",
-          "xbanish",
+          'xorg',
+          'xinput',
+          'arandr',
+          'xdo',
+          'xdotool',
+          'xclip',
+          'xbanish',
         ],
       },
     ],
   },
   {
-    category: "common",
-    title: "VCS",
+    category: 'common',
+    title: 'VCS',
     substeps: [
       {
-        apps: ["git"],
+        apps: ['git'],
       },
       {
-        title: "installing lazygit",
+        title: 'installing lazygit',
         cmd: [
           `
             mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
@@ -392,30 +391,30 @@ const steps: Steps[] = [
             curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_\${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"; \\
             tar xf lazygit.tar.gz lazygit; \\
             sudo install lazygit /usr/local/bin;
-          `
-        ]
-      }
+          `,
+        ],
+      },
     ],
   },
   {
-    category: "desktop",
-    title: "multimedia tools",
+    category: 'desktop',
+    title: 'multimedia tools',
     substeps: [
       {
         apps: [
-          "vlc",
-          "yt-dlp",
-          "flameshot",
-          "simplescreenrecorder",
-          "zathura",
-          "zathura-pdf-poppler",
+          'vlc',
+          'yt-dlp',
+          'flameshot',
+          'simplescreenrecorder',
+          'zathura',
+          'zathura-pdf-poppler',
           // "obs-studio",
           // "cheese",
-          "mpd",
-          "ncmpcpp",
-          "mpc",
-          "sxiv",
-          "gimp",
+          'mpd',
+          'ncmpcpp',
+          'mpc',
+          'sxiv',
+          'gimp',
           // "imagemagick",
           // "xloadimage",
           // "feh",
@@ -423,7 +422,7 @@ const steps: Steps[] = [
       },
       {
         enabled: false,
-        title: "installing droidCam",
+        title: 'installing droidCam',
         cmd: [
           `mkdir -p $HOME/Downloads/droidCam && cd $HOME/Downloads/droidCam \\
           wget -O droidcam_latest.zip https://files.dev47apps.net/linux/droidcam_2.0.0.zip \\
@@ -436,147 +435,147 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: "common",
-    title: "better alternatives",
+    category: 'common',
+    title: 'better alternatives',
     substeps: [
       {
-        apps: ["ripgrep", "btop", "fd-find", "ncdu", "bat", "tldr"],
+        apps: ['ripgrep', 'btop', 'fd-find', 'ncdu', 'bat', 'tldr'],
       },
     ],
   },
   {
-    category: "common",
-    title: "basic tools",
+    category: 'common',
+    title: 'basic tools',
     substeps: [
       {
-        apps: ["rsync", "bc", "tree", "trash-cli", "rename", "whois", "fzf"],
+        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'],
       },
     ],
   },
   {
-    category: "common",
-    title: "disk tools",
+    category: 'common',
+    title: 'disk tools',
     substeps: [
       {
-        title: "partitioning, resizing, etc",
-        apps: ["dosfstools", "gdisk", "lvm2", "smartmontools"],
+        title: 'partitioning, resizing, etc',
+        apps: ['dosfstools', 'gdisk', 'lvm2', 'smartmontools'],
       },
       {
         enabled: false,
-        title: "backup",
-        apps: ["timeshift"],
+        title: 'backup',
+        apps: ['timeshift'],
       },
     ],
   },
   {
     enabled: false,
-    category: "common",
-    title: "android tools",
+    category: 'common',
+    title: 'android tools',
     substeps: [
       {
-        apps: ["adb", "fastboot"],
+        apps: ['adb', 'fastboot'],
       },
     ],
   },
   {
     enabled: false,
-    category: "desktop",
-    title: "virtualization",
+    category: 'desktop',
+    title: 'virtualization',
     substeps: [
       {
-        title: "Docker",
-        apps: ["docker.io", "docker-compose"],
+        title: 'Docker',
+        apps: ['docker.io', 'docker-compose'],
       },
       {
-        title: "qemu shared dependencies",
-        apps: ["qemu-system", "libvirt-daemon-system"],
+        title: 'qemu shared dependencies',
+        apps: ['qemu-system', 'libvirt-daemon-system'],
       },
       {
         enabled: false, // enable when using CLI-only
-        title: "qemu CLI dependencies - enable if you disable GUI client",
-        apps: ["libvirt-clients", "qemu-utils", "ovmf"],
+        title: 'qemu CLI dependencies - enable if you disable GUI client',
+        apps: ['libvirt-clients', 'qemu-utils', 'ovmf'],
       },
       {
-        title: "CLI client",
-        apps: ["virtinst"],
+        title: 'CLI client',
+        apps: ['virtinst'],
       },
       {
-        title: "GUI client",
-        apps: ["virt-manager"],
+        title: 'GUI client',
+        apps: ['virt-manager'],
       },
       {
-        title: "qemu viewer",
-        apps: ["virt-viewer"],
+        title: 'qemu viewer',
+        apps: ['virt-viewer'],
       },
       {
-        title: "adding user to libvirt groups",
+        title: 'adding user to libvirt groups',
         cmd: [`sudo usermod -aG libvirt,libvirt-qemu $USER`],
       },
       {
-        title: "adding user to docker group",
+        title: 'adding user to docker group',
         cmd: [`sudo usermod -aG docker $USER`],
       },
     ],
   },
   {
-    category: "common",
-    title: "security",
+    category: 'common',
+    title: 'security',
     substeps: [
       {
         enabled: false,
-        apps: ["firejail", "ufw"],
+        apps: ['firejail', 'ufw'],
       },
       {
         enabled: false,
-        apps: ["tor", "proxychains"],
+        apps: ['tor', 'proxychains'],
       },
       {
-        apps: ["pass", "pinentry-qt"],
+        apps: ['pass', 'pinentry-qt'],
         // TODO: make this more generic: get gpg key id by email
-        cmd: ["pass init 29E7111E31B67AD036E371BC2DC6D6ACC9718E3E"],
+        cmd: ['pass init 29E7111E31B67AD036E371BC2DC6D6ACC9718E3E'],
       },
       {
-        title: "a password prompt for privs escalation (for GUI apps)",
-        apps: ["policykit-1-gnome"],
-      },
-    ],
-  },
-  {
-    category: "desktop",
-    title: "notifications",
-    substeps: [
-      {
-        apps: ["dbus-x11", "notification-daemon", "libnotify-bin", "dunst"],
+        title: 'a password prompt for privs escalation (for GUI apps)',
+        apps: ['policykit-1-gnome'],
       },
     ],
   },
   {
-    category: "desktop",
-    title: "audio tools",
+    category: 'desktop',
+    title: 'notifications',
     substeps: [
       {
-        apps: ["pulseaudio", "alsa-utils", "pavucontrol"],
+        apps: ['dbus-x11', 'notification-daemon', 'libnotify-bin', 'dunst'],
       },
     ],
   },
   {
-    category: "desktop",
-    title: "desktop GUI",
+    category: 'desktop',
+    title: 'audio tools',
     substeps: [
       {
-        title: "wm and status bar",
-        apps: ["i3", "polybar"],
+        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'desktop GUI',
+    substeps: [
+      {
+        title: 'wm and status bar',
+        apps: ['i3', 'polybar'],
       },
       {
-        title: "app luncher and menu",
-        apps: ["suckless-tools" /*'rofi'*/],
+        title: 'app luncher and menu',
+        apps: ['suckless-tools' /*'rofi'*/],
       },
       {
-        title: "hot key daemon",
-        apps: ["sxhkd"],
+        title: 'hot key daemon',
+        apps: ['sxhkd'],
       },
       {
-        title: "installing keyboard key mapper (keyd)",
+        title: 'installing keyboard key mapper (keyd)',
         cmd: [
           `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
           git clone https://github.com/rvaiya/keyd; \\
@@ -592,54 +591,54 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: "desktop",
-    title: "file management",
+    category: 'desktop',
+    title: 'file management',
     substeps: [
       {
-        apps: ["ranger"],
+        apps: ['ranger'],
       },
     ],
   },
   {
-    category: "desktop",
-    title: "terminal",
+    category: 'desktop',
+    title: 'terminal',
     substeps: [
       {
-        apps: ["alacritty"],
+        apps: ['alacritty'],
       },
     ],
   },
   {
-    category: "desktop",
-    title: "browsers",
+    category: 'desktop',
+    title: 'browsers',
     substeps: [
       {
-        apps: ["chromium", "brave-browser", "google-chrome-stable"],
-      },
-    ],
-  },
-  {
-    enabled: false,
-    category: "desktop",
-    title: "mail client",
-    substeps: [
-      {
-        apps: ["thunderbird"],
+        apps: ['chromium', 'brave-browser', 'google-chrome-stable'],
       },
     ],
   },
   {
     enabled: false,
-    category: "desktop",
-    title: "torrent client - deb package",
+    category: 'desktop',
+    title: 'mail client',
+    substeps: [
+      {
+        apps: ['thunderbird'],
+      },
+    ],
+  },
+  {
+    enabled: false,
+    category: 'desktop',
+    title: 'torrent client - deb package',
     substeps: [
       {
         cmd: [
-          "mkdir -p $HOME/Downloads;",
-          "wget -O $HOME/Downloads/libssl.deb http://snapshot.debian.org/archive/debian/20110406T213352Z/pool/main/o/openssl098/libssl0.9.8_0.9.8o-7_i386.deb",
-          "sudo apt install $HOME/Downloads/libssl.deb -y",
-          "rm $HOME/Downloads/libssl.deb",
-          "sudo wget -O /usr/src/utorrent.tar.gz http://download.utorrent.com/linux/utorrent-server-3.0-25053.tar.gz",
+          'mkdir -p $HOME/Downloads;',
+          'wget -O $HOME/Downloads/libssl.deb http://snapshot.debian.org/archive/debian/20110406T213352Z/pool/main/o/openssl098/libssl0.9.8_0.9.8o-7_i386.deb',
+          'sudo apt install $HOME/Downloads/libssl.deb -y',
+          'rm $HOME/Downloads/libssl.deb',
+          'sudo wget -O /usr/src/utorrent.tar.gz http://download.utorrent.com/linux/utorrent-server-3.0-25053.tar.gz',
 
           `cd /usr/src \\
           sudo tar xvzf /usr/src/utorrent.tar.gz -C utorrent/ \\
@@ -650,87 +649,87 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: "common",
-    title: "databases",
+    category: 'common',
+    title: 'databases',
     substeps: [
       {
         enabled: false,
-        title: "installing MySQL",
-        apps: ['myql']
+        title: 'installing MySQL',
+        apps: ['myql'],
       },
       {
-        title: "installing sqlite3",
-        apps: ["sqlite3"],
+        title: 'installing sqlite3',
+        apps: ['sqlite3'],
       },
     ],
   },
   {
-    category: "common",
-    title: "editors",
+    category: 'common',
+    title: 'editors',
     substeps: [
       {
-        title: "installing lazyvim from repo",
+        title: 'installing lazyvim from repo',
         enabled: false,
-        apps: ["lazyvim (nvm)"],
+        apps: ['lazyvim (nvm)'],
         cmd: [
-          "git clone https://github.com/LazyVim/starter $HOME/.config/nvim",
-          "rm -rf $HOME/.config/nvim/.git",
-          "sudo apt update -y",
+          'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
+          'rm -rf $HOME/.config/nvim/.git',
+          'sudo apt update -y',
         ],
       },
       {
-        title: "installing vscode",
-        apps: ['code']
+        title: 'installing vscode',
+        apps: ['code'],
       },
     ],
   },
   {
     enabled: false,
-    category: "homeServer",
-    title: "jellyFin server",
+    category: 'homeServer',
+    title: 'jellyFin server',
     substeps: [
       {
         cmd: [
-          "wget -O- https://repo.jellyfin.org/install-debuntu.sh | sudo bash",
+          'wget -O- https://repo.jellyfin.org/install-debuntu.sh | sudo bash',
         ],
       },
     ],
   },
   {
     enabled: false,
-    category: "homeServer",
-    title: "plex server",
+    category: 'homeServer',
+    title: 'plex server',
     substeps: [
       {
         cmd: [
-          "echo deb https://downloads.plex.tv/repo/deb public main | sudo tee /etc/apt/sources.list.d/plexmediaserver.list",
-          "curl https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add -",
-          "sudo apt update -y",
+          'echo deb https://downloads.plex.tv/repo/deb public main | sudo tee /etc/apt/sources.list.d/plexmediaserver.list',
+          'curl https://downloads.plex.tv/plex-keys/PlexSign.key | sudo apt-key add -',
+          'sudo apt update -y',
         ],
       },
       {
-        apps: ["plexmediaserver"],
+        apps: ['plexmediaserver'],
       },
     ],
   },
   {
-    category: "common",
-    title: "change default shell to zsh and installing zap (package manager)",
+    category: 'common',
+    title: 'change default shell to zsh and installing zap (package manager)',
     substeps: [
       {
-        apps: ["zsh", "zsh-autosuggestions", "zsh-syntax-highlighting"],
+        apps: ['zsh', 'zsh-autosuggestions', 'zsh-syntax-highlighting'],
       },
       {
         cmd: [
-          "sudo chsh -s /bin/zsh $USER",
-          "zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1",
+          'sudo chsh -s /bin/zsh $USER',
+          'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
         ],
       },
     ],
   },
   {
-    category: "common",
-    title: "installing nvm and node",
+    category: 'common',
+    title: 'installing nvm and node',
     substeps: [
       {
         cmd: [
@@ -750,17 +749,17 @@ const steps: Steps[] = [
   },
   {
     enabled: false,
-    category: "desktop",
-    title: "installing node packages",
+    category: 'desktop',
+    title: 'installing node packages',
     substeps: [
       {
-        cmd: ["pnpm i -g nodemon pm2 prettier typescript"],
+        cmd: ['pnpm i -g nodemon pm2 prettier typescript'],
       },
     ],
   },
   {
-    title: "remove useless dirs",
-    category: "common",
+    title: 'remove useless dirs',
+    category: 'common',
     substeps: [
       {
         cmd: [
@@ -770,8 +769,8 @@ const steps: Steps[] = [
     ],
   },
   {
-    title: "set time zone",
-    category: "common",
+    title: 'set time zone',
+    category: 'common',
     substeps: [
       {
         cmd: [`sudo timedatectl set-timezone Africa/Casablanca`],
@@ -779,8 +778,8 @@ const steps: Steps[] = [
     ],
   },
   {
-    title: "syncing/restore files from bkp drive",
-    category: "desktop",
+    title: 'syncing/restore files from bkp drive',
+    category: 'desktop',
     substeps: [
       {
         cmd: [
@@ -795,21 +794,23 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: "common",
-    title: "setting up dotfiles",
+    category: 'common',
+    title: 'setting up dotfiles',
     substeps: [
       {
-        title: "restore ssh keys",
+        title: 'restore ssh keys',
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.ssh $HOME/`,
         ],
       },
       {
-        title: "backing up any old .dotfiles",
-        cmd: [`[ -d ${config.bkp.dotfiles.path} ] && mv ${config.bkp.dotfiles.path} ${config.bkp.dotfiles.path}-bkp`],
+        title: 'backing up any old .dotfiles',
+        cmd: [
+          `[ -d ${config.bkp.dotfiles.path} ] && mv ${config.bkp.dotfiles.path} ${config.bkp.dotfiles.path}-bkp`,
+        ],
       },
       {
-        title: "cloning the dotfiles repo",
+        title: 'cloning the dotfiles repo',
         cmd: [
           `git clone --bare ${config.bkp.repo.sshUrl} ${config.bkp.dotfiles.path}`,
         ],
@@ -817,27 +818,27 @@ const steps: Steps[] = [
       {
         title: `checkout ${config.bkp.dotfiles.path} after backing up existing dotfiles`,
         cmd: [
-          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout -f;`
+          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout -f;`,
         ],
       },
       {
-        title: "hiding untracked files",
+        title: 'hiding untracked files',
         cmd: [
           `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME config --local status.showUntrackedFiles no`,
         ],
       },
     ],
-  }
+  },
 ];
 // todo: install lazygit
 
 const manualSteps = [
-  "disable password for reboot and shutdown",
-  " - add the following to /etc/sudoers:",
-  " - %username ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt",
-  "re-login for the default shell to be set",
-  "add core2 (home server) to /etc/hosts",
-  "edit grub (reduce tiemout)",
+  'disable password for reboot and shutdown',
+  ' - add the following to /etc/sudoers:',
+  ' - %username ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt',
+  're-login for the default shell to be set',
+  'add core2 (home server) to /etc/hosts',
+  'edit grub (reduce tiemout)',
 ];
 
 // --------------------------------------------------------------------
@@ -858,7 +859,7 @@ async function runSteps() {
 
     if (
       step.category !== config.defaults.template &&
-      step.category !== "common"
+      step.category !== 'common'
     ) {
       continue;
     }
@@ -866,10 +867,10 @@ async function runSteps() {
       continue;
     }
 
-    console.log(""); //* don't remove
+    console.log(''); //* don't remove
     print.title(
       `================ ${stepIndex + 1} / ${stepsList.length} - ${step.category
-      } - ${step.title ? step.title : "untitled step"} =====================`
+      } - ${step.title ? step.title : 'untitled step'} =====================`,
     );
     // print[step.enabled === false ? 'info': 'title']('==================================================================')
 
@@ -886,8 +887,8 @@ async function runSteps() {
       }
 
       print.title(
-        `${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? "untitled substep"
-        }`
+        `${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? 'untitled substep'
+        }`,
       );
 
       if (substep.apps) {
@@ -920,8 +921,8 @@ async function runSteps() {
             print.title(
               `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
                 0,
-                21
-              )}..."`
+                21,
+              )}..."`,
             );
             command(cmd);
           } catch (err) {
@@ -938,9 +939,9 @@ async function runSteps() {
   }
 
   console.log();
-  print.title("======== Manual Steps ===========");
+  print.title('======== Manual Steps ===========');
   manualSteps.forEach((step, index) => {
-    if (typeof step == "string") {
+    if (typeof step == 'string') {
       print.title(`${index + 1}) ${step}`);
       return;
     }
@@ -954,59 +955,140 @@ async function runSteps() {
 // ------------------------- HANDLE ARGS -------------------------
 // ---------------------------------------------------------------
 
-const args = {
-  length: process.args.length,
-  // option: process.args[1], // in nodejs
-  option: process.args[0] as string, // in deno
-  //? args should be like "node thing.js option argKey:argValue"
-  optionArgs: process.args
-    .slice(1)
-    .reduce((accumulator: {}, optionArg: string) => {
-      const optionArgTupal = optionArg.split(":");
-      accumulator = { ...accumulator, [optionArgTupal[0]]: optionArgTupal[1] };
-      return accumulator;
-    }, {}),
+const argsShortHand = {
+  h: 'help',
+  d: 'dryRun',
+  l: 'list',
 };
 
-const main = async () => {
-  if (args.length) {
-    const options: { [key: string]: (args: any) => any } = {
-      // list steps
-      list: ({ includeDisabled }: { includeDisabled: string }) => {
-        // console.log({ includeDisabled: Boolean(includeDisabled) })
-        let stepsList = steps;
-        if (!Number(includeDisabled)) {
-          stepsList = steps.filter((step) => step.enabled !== false);
+interface Arg {
+  value: boolean | string | number,
+  dependencies?: string[],
+  dependencyOf?: string[],
+}
+type Args = Record<string, Arg>;
+const defaultArgs: Args = {
+  help: {
+    value: false
+  },
+  run: {
+    value: false
+  },
+  dryRun: {
+    value: false,
+  },
+  list: {
+    dependencies: ['listDisabledSteps'],
+    value: false,
+  },
+  listDisabledSteps: {
+    dependencyOf: ['list'],
+    value: false,
+  },
+  check: {
+    value: true,
+  },
+};
+
+function handleSqueezedFlags(argsString) {
+  const shortArgsList = argsString.split('-')[1].split('');
+  for (const shortArg of shortArgsList) {
+    defaultArgs[argsShortHand[shortArg]].value = true;
+  }
+}
+function handleShortArgs(args: string) {
+  if (args.includes(':')) {
+    // there is no squeezing for key-value
+    if (args.length > 2) {
+      let errorMsg = 'Err: No squeezing for key-value pairs!';
+      errorMsg +=
+        "\nIf you intend to shorthand a key-value argument, make sure there is only one letter after '-' and before ':'";
+      errorMsg += `\nThe flawed argument: ${args}`;
+
+      throw Error(errorMsg);
+    }
+
+    const [key, value] = args.split('-')[1].split(':');
+    // todo: parse value types
+    defaultArgs[argsShortHand[key]].value = value;
+  } else {
+    // flags squeezed into one
+    if (args.length > 2) {
+      return handleSqueezedFlags(args);
+    }
+
+    // only one flag
+    defaultArgs[argsShortHand[args.split('-')[1]]].value = true;
+  }
+}
+
+function handleFullArgs(args: string) {
+  if (args.includes(':')) {
+    const [key, value] = args.split(':');
+    // todo: parse value types
+    defaultArgs[args].value = value;
+  } else {
+    defaultArgs[args].value = true;
+  }
+}
+
+// modifies defaultArgs to store new args' values
+function parseArgs() {
+  // depending on whether you use nodejs or deno: in deno use 0, in nodejs use 2
+  const argsStartIndex = 0;
+  process.args
+    .slice(argsStartIndex)
+    .forEach(
+      (optionArg: string) => {
+        if (optionArg.includes('-')) {
+          handleShortArgs(optionArg);
+          return;
         }
-        stepsList.forEach((step, stepIndex, list) => {
-          print[step.enabled === false ? "error" : "title"](
-            `${stepIndex + 1} / ${list.length} - ${step.category} - ${step.title
-            }`
-          );
-        });
+        handleFullArgs(optionArg);
       },
-      // TODO: add other options
-    };
+    );
 
-    if (options?.[args.option]) {
-      // console.log(args.optionArgs)
-      options[args.option](args.optionArgs);
-    } else {
-      // the default action: when no arguments were passed
+  return defaultArgs;
+}
 
-      if (args.option != 'no-check') {
-        print.info("setting up environment...");
+const main = async () => {
+  const args = parseArgs();
+
+  const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
+    // list steps
+    list: ({ includeDisabled }: { includeDisabled: string }) => {
+      // console.log({ includeDisabled: Boolean(includeDisabled) })
+      let stepsList = steps;
+      if (!Number(includeDisabled)) {
+        stepsList = steps.filter((step) => step.enabled !== false);
+      }
+      stepsList.forEach((step, stepIndex, list) => {
+        print[step.enabled === false ? 'error' : 'title'](
+          `${stepIndex + 1} / ${list.length} - ${step.category} - ${step.title
+          }`,
+        );
+      });
+    },
+    run: async () => {
+      if (args.check) {
+        print.info('setting up environment...');
         const env = loadEnv();
-        console.log(env);
         if (!env.allSet) {
-          print.error(`The environment wasn't setup`)
-          process.exit(1);
+          throw Error(`The environment wasn't setup!\n${env}`);
         }
       }
 
       await runSteps();
+    },
+  };
+
+  for (const argKey of Object.keys(args)) {
+    const arg = args[argKey];
+    if (!arg.dependencyOf) {
+      await options[argKey]();
     }
   }
+
 };
 
 // ----------------- ENTRY POINT
