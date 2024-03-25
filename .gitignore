@@ -1,1 +1,5 @@
 deploy.sh
+node_modules
+packge.json
+*.yaml
+.vscode

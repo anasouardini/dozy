@@ -1,0 +1,9 @@
+build
+bin
+node_modules
+.pnpm-store
+dist
+dev-dist
+coverage
+*.yaml
+*.md

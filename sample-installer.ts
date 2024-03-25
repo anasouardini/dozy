@@ -1,4 +1,4 @@
-import fs from "node:fs";
+import fs from 'node:fs';
 
 const process = Deno;
 
@@ -9,10 +9,10 @@ const process = Deno;
 const config = {
   dryRun: true,
   user: {
-    name: 'venego'
+    name: 'venego',
   },
   path: {
-    log: "postInstallation.log",
+    log: 'postInstallation.log',
   },
 };
 
@@ -21,10 +21,10 @@ const config = {
 // --------------------------------------------------------------------
 
 interface Print {
-  title: (msg: string) => void,
-  error: (msg: string) => void,
-  success: (msg: string) => void,
-  info: (msg: string) => void,
+  title: (msg: string) => void;
+  error: (msg: string) => void;
+  success: (msg: string) => void;
+  info: (msg: string) => void;
 }
 const print: Print = {
   title: (msg: string) => {
@@ -61,7 +61,7 @@ const log = ({
       config.path.log,
       `\n-----------------------------------------------------------------------------------------------
        \n------------------->> ${new Date().toISOString()} - installation start <<----------------------\n
-        ------------------------------------------------------------------------------------------------\n`
+        ------------------------------------------------------------------------------------------------\n`,
     );
     logVars.logSessionMarked = true;
   }
@@ -71,32 +71,34 @@ const log = ({
   }
   fs.appendFileSync(
     config.path.log,
-    `\n------------------->> ${new Date().toISOString()} - ${orderStr}\n${title}\n${msg}\n<<----------------------\n`
+    `\n------------------->> ${new Date().toISOString()} - ${orderStr}\n${title}\n${msg}\n<<----------------------\n`,
   );
 };
 
 const sleep = (t: number) => new Promise((resolve) => setTimeout(resolve, t));
 
 const command = (cmd: string, printOutput: boolean = false) => {
-  const output = new process.Command("bash", { args: ["-c", cmd] }).outputSync();
+  const output = new process.Command('bash', {
+    args: ['-c', cmd],
+  }).outputSync();
 
   const decoder = new TextDecoder();
   const stderr = decoder.decode(output.stderr);
   const stdout = decoder.decode(output.stdout);
 
   if (printOutput) {
-    console.log("stdout:", stdout);
+    console.log('stdout:', stdout);
   }
 
   if (stderr) {
     //* some warnings are outputed as errors.
-    const falsePositives = ["warning"];
+    const falsePositives = ['warning'];
     if (
       falsePositives.some((item) =>
-        stderr.toLowerCase().includes(item.toLocaleLowerCase())
+        stderr.toLowerCase().includes(item.toLocaleLowerCase()),
       )
     ) {
-      console.log("IMPORTANT (I guess) => " + stderr);
+      console.log('IMPORTANT (I guess) => ' + stderr);
       return;
     }
 
@@ -105,9 +107,9 @@ const command = (cmd: string, printOutput: boolean = false) => {
 };
 
 interface EnvVars {
-  driveAttached: boolean,
-  driveMounted: boolean,
-  internetAvailable: boolean,
+  driveAttached: boolean;
+  driveMounted: boolean;
+  internetAvailable: boolean;
 }
 
 // ------------------------------------------------------------------
@@ -126,10 +128,10 @@ type Steps = {
 };
 const steps: Steps[] = [
   {
-    title: "this is a sample installer step.",
+    title: 'this is a sample installer step.',
     substeps: [
       {
-        title: "this is a sample installer echo command.",
+        title: 'this is a sample installer echo command.',
         cmd: ["echo 'this is a sample installer'"],
       },
     ],
@@ -154,9 +156,7 @@ const steps: Steps[] = [
 ];
 
 // these are printed after post-installation
-const manualSteps = [
-  "do some manual step that you can't automate",
-];
+const manualSteps = ["do some manual step that you can't automate"];
 
 // --------------------------------------------------------------------
 // ------------------------- INSTALLATION RUN -------------------------
@@ -171,9 +171,9 @@ async function runSteps() {
       continue;
     }
 
-    console.log(""); //* don't remove
+    console.log(''); //* don't remove
     print.title(
-      `================ ${stepIndex + 1} / ${stepsList.length} - ${step.title ? step.title : "untitled step"} =====================`
+      `================ ${stepIndex + 1} / ${stepsList.length} - ${step.title ? step.title : 'untitled step'} =====================`,
     );
     // print[step.enabled === false ? 'info': 'title']('==================================================================')
 
@@ -190,8 +190,9 @@ async function runSteps() {
       }
 
       print.title(
-        `${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? "untitled substep"
-        }`
+        `${substepIndex + 1} / ${substepsList.length} - ${
+          substep.title ?? 'untitled substep'
+        }`,
       );
 
       if (substep.apps) {
@@ -224,14 +225,15 @@ async function runSteps() {
             print.title(
               `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
                 0,
-                21
-              )}..."`
+                21,
+              )}..."`,
             );
             command(cmd);
           } catch (err) {
             log({
-              orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
-                }.${substepsList.length}.${cmdList.length}`,
+              orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${
+                stepsList.length
+              }.${substepsList.length}.${cmdList.length}`,
               title: `running ${cmd}`,
               msg: `${err}`,
             });
@@ -242,9 +244,9 @@ async function runSteps() {
   }
 
   console.log();
-  print.title("======== Manual Steps ===========");
+  print.title('======== Manual Steps ===========');
   manualSteps.forEach((step, index) => {
-    if (typeof step == "string") {
+    if (typeof step == 'string') {
       print.title(`${index + 1}) ${step}`);
       return;
     }
@@ -262,7 +264,7 @@ const args = {
   optionArgs: process.args
     .slice(1)
     .reduce((accumulator: {}, optionArg: string) => {
-      const optionArgTupal = optionArg.split("=");
+      const optionArgTupal = optionArg.split('=');
       accumulator = { ...accumulator, [optionArgTupal[0]]: optionArgTupal[1] };
       return accumulator;
     }, {}),
@@ -279,9 +281,8 @@ const main = async () => {
           stepsList = steps.filter((step) => step.enabled !== false);
         }
         stepsList.forEach((step, stepIndex, list) => {
-          print[step.enabled === false ? "error" : "title"](
-            `${stepIndex + 1} / ${list.length} - ${step.title
-            }`
+          print[step.enabled === false ? 'error' : 'title'](
+            `${stepIndex + 1} / ${list.length} - ${step.title}`,
           );
         });
       },
