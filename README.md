@@ -14,4 +14,10 @@ sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample
 
 Instead of `sample` you use a different prefix if it exists in the repo like `anasouardini`, or you've added it yourself.
 
-el free to add your own installation script to this repository.
+feel free to add your own installation script to this repository.
+
+You can, as well, pass any arguments to your script
+
+```bash
+sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample run check-env etc
+```

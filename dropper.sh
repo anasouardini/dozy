@@ -42,6 +42,6 @@ if [ -f $installerPath ]; then
   rm -rf $installerPath;
 fi
 
-curl -fsSL "${host}/${githubUsername}-installer.ts" -o $installerPath;
+curl -fsSL "${host}/users/${githubUsername}/installer.ts" -o $installerPath;
 echo "running the post-installation script";
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;

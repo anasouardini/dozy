@@ -12,6 +12,7 @@ const config = {
     repo: {
       webUrl: 'https://github.com/anasouardini/dotfiles.git',
       sshUrl: 'git@github.com:anasouardini/dotfiles.git',
+      localURI: '',
     },
     dotfiles: {
       path: '$HOME/.dotfiles',
@@ -24,7 +25,9 @@ const config = {
   defaults: {
     template: 'desktop',
   },
+  archConfigUrl: 'https://postinstaller.netlify.app/users/anasouardini'
 };
+config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
 // --------------------------------------------------------------------
 // ---------------------------- UTILITIES -----------------------------
@@ -267,11 +270,6 @@ const steps: Steps[] = [
         cmd: ['sudo apt update -y;'],
       },
     ],
-  },
-  {
-    category: 'common',
-    title: 'stopper',
-    substeps: [],
   },
   {
     category: 'common',
@@ -785,10 +783,10 @@ const steps: Steps[] = [
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/* $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.config $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.vscode $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.gnupg $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/.password-store $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.config $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.vscode $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.gnupg $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.password-store $HOME/;`,
         ],
       },
     ],
@@ -812,7 +810,7 @@ const steps: Steps[] = [
       {
         title: 'cloning the dotfiles repo',
         cmd: [
-          `git clone --bare ${config.bkp.repo.sshUrl} ${config.bkp.dotfiles.path}`,
+          `git clone --bare ${config.bkp.repo.localURI} ${config.bkp.dotfiles.path}`,
         ],
       },
       {
@@ -966,16 +964,33 @@ interface Arg {
   dependencies?: string[],
   dependencyOf?: string[],
 }
-type Args = Record<string, Arg>;
+type Args = {
+  help: { value: boolean },
+  run: { value: boolean },
+  check: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
+  dryRun: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
+  list: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
+  listDisabledSteps: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
+  installOS: { value: '' | 'archlinux' | 'debian', dependencies?: string[], dependencyOf?: string[] },
+};
+//! order matters
 const defaultArgs: Args = {
   help: {
     value: false
   },
+  installOS: {
+    value: ''
+  },
   run: {
     value: false
   },
+  check: {
+    value: true,
+    dependencyOf: ['run'],
+  },
   dryRun: {
     value: false,
+    dependencyOf: ['run'],
   },
   list: {
     dependencies: ['listDisabledSteps'],
@@ -984,10 +999,7 @@ const defaultArgs: Args = {
   listDisabledSteps: {
     dependencyOf: ['list'],
     value: false,
-  },
-  check: {
-    value: true,
-  },
+  }
 };
 
 function handleSqueezedFlags(argsString) {
@@ -1069,6 +1081,9 @@ const main = async () => {
         );
       });
     },
+    help: () => {
+      print.info('WIP :)');
+    },
     run: async () => {
       if (args.check) {
         print.info('setting up environment...');
@@ -1080,6 +1095,12 @@ const main = async () => {
 
       await runSteps();
     },
+    installOS: () => {
+      if (args.installOS.value == 'archlinux') {
+        print.info('installing archlinux...');
+        command(`archinstall --config ${config.archConfigUrl}/user_configuration.json --credentials ${config.archConfigUrl}/user_credentials.json`);
+      }
+    }
   };
 
   for (const argKey of Object.keys(args)) {
