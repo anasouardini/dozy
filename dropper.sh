@@ -1,5 +1,13 @@
 #!/bin/bash
 
+os="debian";
+osVersion=$(cat /proc/version);
+if [[ osVersion == *"arch"* ]];then
+  os="archlinux";
+elif [[ osVersion == *"debian"* ]];then
+  os="debian";
+fi
+
 host="https://postinstaller.netlify.app";
 
 # check args
@@ -15,7 +23,11 @@ installerArgs=$@;
 command -v curl > /dev/null 2>&1;
 if [ ! $? -eq 0 ]; then
   echo "installing curl";
-  sudo apt install curl -y
+  if [[ os == *"archlinux"* ]];then
+    sudo pacman -S curl --noconfirm
+  elif [[ os == *"debian"* ]];then
+    sudo apt install curl -y
+  fi
 fi
 
 #-------- install deno
@@ -23,7 +35,11 @@ fi
 command -v unzip > /dev/null 2>&1;
 if [ ! $? -eq 0 ]; then
   echo "installing unzip";
-  sudo apt install unzip -y
+  if [[ os == *"archlinux"* ]];then
+    sudo pacman -S unzip --noconfirm
+  elif [[ os == *"debian"* ]];then
+    sudo apt install unzip -y
+  fi
 fi
 
 ls $HOME/.deno/bin/deno > /dev/null 2>&1;
