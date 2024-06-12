@@ -20,9 +20,9 @@ sudo parted "$DISK" -- mkpart primary linux-swap -12GiB 100%
 echo "==================="
 echo "Formatting..."
 
-sduo mkfs.fat -F 32 -n boot "${DISK}1"
-sduo mkfs.ext4 -L nixos "${DISK}2"
-sduo mkswap -L swap "${DISK}3"
+sudo mkfs.fat -F 32 -n boot "${DISK}1"
+sudo mkfs.ext4 -L nixos "${DISK}2"
+sudo mkswap -L swap "${DISK}3"
 
 
 echo "==================="
