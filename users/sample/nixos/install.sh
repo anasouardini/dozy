@@ -1,12 +1,12 @@
-#!/run/current-system/sw/bin/bash
+#!/usr/bin/env bash
 
 lsblk
-read -p "Insert the name of your disk (sda, sdb, etc):" $DISK
+read -p "Insert the name of your disk (sda, sdb, etc):" DISK
 if [[ -z $DISK ]]; then
     echo "Can't leave the name emtpy!"
-    lsblk
     exit 1
 fi
+DISK="/dev/$DISK"
 
 echo "==================="
 echo "Partitioning..."
