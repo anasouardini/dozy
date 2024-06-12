@@ -11,29 +11,29 @@ DISK="/dev/$DISK"
 echo "==================="
 echo "Partitioning..."
 
-parted "$DISK" -- mklabel gpt
-parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
-parted "$DISK" -- set 3 boot on
-parted "$DISK" -- mkpart primary 512MiB -12GiB
-parted "$DISK" -- mkpart primary linux-swap -12GiB 100%
+sudo parted "$DISK" -- mklabel gpt
+sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
+sudo parted "$DISK" -- set 3 boot on
+sudo parted "$DISK" -- mkpart primary 512MiB -12GiB
+sudo parted "$DISK" -- mkpart primary linux-swap -12GiB 100%
 
 echo "==================="
 echo "Formatting..."
 
-mkfs.fat -F 32 -n boot "${DISK}1"
-mkfs.ext4 -L nixos "${DISK}2"
-mkswap -L swap "${DISK}3"
+sduo mkfs.fat -F 32 -n boot "${DISK}1"
+sduo mkfs.ext4 -L nixos "${DISK}2"
+sduo mkswap -L swap "${DISK}3"
 
 
 echo "==================="
 echo "Installing..."
 
-mount /dev/disk/by-label/nixos /mnt
-mkdir -p /mnt/boot
-mount /dev/disk/by-label/boot /mnt/boot
-swapon "${DISK}${NAME_DIVIDER}3"
+sudo mount /dev/disk/by-label/nixos /mnt
+sudo mkdir -p /mnt/boot
+sudo mount /dev/disk/by-label/boot /mnt/boot
+sudo swapon "${DISK}${NAME_DIVIDER}3"
 
 echo "==================="
 echo "Generating config files..."
 
-nixos-generate-config --root /mnt
+sudo nixos-generate-config --root /mnt
