@@ -1,5 +1,6 @@
 #!/run/current-system/sw/bin/bash
 
+lsblk
 read -p "Insert the name of your disk (sda, sdb, etc):" $DISK
 if [[ -z $DISK ]]; then
     echo "Can't leave the name emtpy!"
