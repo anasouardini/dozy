@@ -2,6 +2,7 @@
 
 ## config
 bootType="bios"; # uefi/bios
+bootMenuType="grub"; # grub/systemd-boot
 
 setfont ter-v22n
 
@@ -47,20 +48,15 @@ sudo nixos-generate-config --root /mnt
 sudo mv /mnt/etc/nixos/configuration.nix /mnt/etc/nixos/configuration.nix.bak
 sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/users/sample/nixos/configuration.nix
 
-printf "\n=================== Final Steps\n"
+printf "\n=================== Modifying config files\n"
 if [[ $bootType == "uefi" ]]; then
-    ## for Grub
-    # boot.loader.grub.device="nodev";
-    # boot.loader.grub.efiSupport=true;
-
-    ## for systemd-boot
-    # boot.loader.systemd-boot.enable
-
-    printf "" # can't do empty blocks in bash
+    if [[ $bootMenuType == "grub" ]]; then
+        sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.grub.device = "nodev";\n\tboot.loader.grub.efiSupport = true;/';
+    else
+        sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.systemd-boot.enable;/';
+    fi
 else
-    # boot.loader.grub.device="/dev/${DISK}1";
-    # boot.loader.grub.useOSProber=true;
-    printf "" # can't do empty blocks in bash
+    sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.grub.device = "/dev/vda";\n\tboot.loader.grub.useOSProber=true;/';
 fi
 
 printf "\n=================== Installing\n"
