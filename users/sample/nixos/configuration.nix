@@ -53,7 +53,7 @@
       "video"
     ];
     shell = pkgs.zsh;
-    initialHashedPassword = "venego";
+    initialPassword = "venego";
     packages = with pkgs; [
       neovim
     ];
