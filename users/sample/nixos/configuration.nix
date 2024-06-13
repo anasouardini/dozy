@@ -55,7 +55,9 @@
     isNormalUser = true;
     description = "ven ego";
     extraGroups = [ "networkmanager" "wheel" ];
-    packages = with pkgs; [];
+    packages = with pkgs; [
+      neovim
+    ];
   };
 
   # Allow unfree packages
@@ -64,7 +66,7 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    neovim
+    vim
     git
     wget
   ];
