@@ -17,7 +17,7 @@
   # boot.loader.grub.device = "nodev";
   # boot.loader.grub.efiSupport = true;
   ## BIOS
-  boot.loader.grub.device = "/dev/vda1";
+  boot.loader.grub.device = "/dev/vda";
 
   networking.hostName = "vm"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
