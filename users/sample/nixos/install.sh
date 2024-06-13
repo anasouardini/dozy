@@ -3,6 +3,8 @@
 ## config
 bootType="bios"; # uefi/bios
 bootMenuType="grub"; # grub/systemd-boot
+# configurationPath="./users/sample/nixos/configuration.nix";
+configurationPath="/mnt/etc/nixos/configuration.nix";
 
 setfont ter-v22n
 
@@ -51,12 +53,12 @@ sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/
 printf "\n=================== Modifying config files\n"
 if [[ $bootType == "uefi" ]]; then
     if [[ $bootMenuType == "grub" ]]; then
-        sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.grub.device = "nodev";\n\tboot.loader.grub.efiSupport = true;/';
+        sed -i 's/## GRUB dynamic configuration/## UEFI GRUB configuration\n\tboot.loader.grub.device = "nodev";\n\tboot.loader.grub.efiSupport = true;/' $configurationPath;
     else
-        sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.systemd-boot.enable;/';
+        sed -i 's/## GRUB dynamic configuration/## UEFI systemd-boot configuration\n\tboot.loader.systemd-boot.enable = true;/' $configurationPath;
     fi
 else
-    sed -i 's/## GRUB dynamic configuration/## GRUB dynamic configuration\n\tboot.loader.grub.device = "/dev/vda";\n\tboot.loader.grub.useOSProber=true;/';
+    sed -i 's/## GRUB dynamic configuration/## BIOS GRUB configuration\n\tboot.loader.grub.device = "\/dev\/vda";\n\tboot.loader.grub.useOSProber = true;/' $configurationPath;
 fi
 
 printf "\n=================== Installing\n"
