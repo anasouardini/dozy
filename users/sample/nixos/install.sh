@@ -3,6 +3,8 @@
 ## config
 bootType="uefi"; # uefi/bios
 
+setfont ter-v22n
+
 lsblk
 read -p "Insert the name of your disk (sda, sdb, etc):" DISK
 if [[ -z $DISK ]]; then
@@ -43,11 +45,23 @@ sudo swapon "${DISK}${NAME_DIVIDER}2"
 
 printf "\n=================== Generating config files\n"
 sudo nixos-generate-config --root /mnt
+sudo mv /mnt/etc/nixos/configuration.nix /mnt/etc/nixos/configuration.nix.bak
+sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/users/sample/nixos/configuration.nix
 
 printf "\n=================== final steps\n"
-if [[ ! $bootType == "uefi" ]]; then
+if [[ $bootType == "uefi" ]]; then
+    ## for Grub
+    # boot.loader.grub.device="nodev";
+    # boot.loader.grub.efiSupport=true;
+
+    ## for systemd-boot
+    # boot.loader.systemd-boot.enable
+
     printf "" # can't do empty blocks in bash
-    ## set `boot.loader.grub.device = true`
+else
+    # boot.loader.grub.device="/dev/${DISK}1";
+    # boot.loader.grub.useOSProber=true;
+    printf "" # can't do empty blocks in bash
 fi
 sudo nixos-install --no-root-passwd
 
