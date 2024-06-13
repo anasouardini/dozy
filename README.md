@@ -21,3 +21,11 @@ You can, as well, pass any arguments to your script
 ```bash
 sh <(curl -fsSL "https://postinstaller.netlify.app/dropper.sh") sample run check-env etc
 ```
+
+Here is simpler NixOS installer for a vm:
+
+```bash
+sh <(curl -fsSL "https://postinstaller.netlify.app/users/sample/nixos/install.sh")
+```
+
+NixOS makes it harder for the configuration.nix to be versatile, you might need to tweak it a bit.
