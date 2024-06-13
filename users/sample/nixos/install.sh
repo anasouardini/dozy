@@ -38,7 +38,6 @@ printf "\n=================== Mounting\n"
 sudo mount /dev/disk/by-label/nixos /mnt
 if [[ $bootType == "uefi" ]]; then
     sudo mkdir -p /mnt/boot
-    # sudo mount /dev/disk/by-label/boot /mnt/boot
     sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
 fi
 sudo swapon "${DISK}${NAME_DIVIDER}2"
@@ -65,11 +64,18 @@ else
 fi
 
 printf "\n=================== Installing\n"
-sudo nixos-install # --no-root-passwd
+sudo nixos-install
+# it'll ask for setting the root password. (--no-root-passwd) doesn't work
+# it'll unmount the /mnt (root filesystem)
 
 # Might not be needed since most things can be done by
 # just dropping a config file to the target disk ¯\_(ツ)_/¯
 # printf "\n=================== Preparing the chroot environment\n"
+# sudo mount /dev/disk/by-label/nixos /mnt
+# if [[ $bootType == "uefi" ]]; then
+#     sudo mkdir -p /mnt/boot
+#     sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
+# fi
 # sudo mount --bind /proc /mnt/proc
 # sudo mount --bind /dev /mnt/dev
 # sudo mount --bind /sys /mnt/sys
