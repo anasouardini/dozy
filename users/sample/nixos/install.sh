@@ -18,20 +18,19 @@ DISK="/dev/$DISK"
 printf "\n=================== Partitioning\n"
 if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- mklabel gpt
-    sudo parted "$DISK" -- mkpart root ext4 512MiB -12GiB
-    sudo parted "$DISK" -- mkpart swap linux-swap -12GiB 100%
+    sudo parted "$DISK" -- mkpart root ext4 512MiB 100%
     sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
-    sudo parted "$DISK" -- set 3 esp on
+    sudo parted "$DISK" -- set 2 esp on
 else
     sudo parted "$DISK" -- mklabel msdos
-    sudo parted "$DISK" -- mkpart primary ext4 1MiB -12GiB
+    sudo parted "$DISK" -- mkpart primary ext4 1MiB 100%
     sudo parted "$DISK" -- set 1 boot on
-    sudo parted "$DISK" -- mkpart primary linux-swap -12GiB 100%
 fi
 
 printf "\n=================== Formatting\n"
 sudo mkfs.ext4 -L nixos "${DISK}1"
-sudo mkswap -L swap "${DISK}2"
+# sudo mkswap -L swap "${DISK}3"
+# sudo swapon "${DISK}${NAME_DIVIDER}2"
 if [[ $bootType == "uefi" ]]; then
     sudo mkfs.fat -F 32 -n boot "${DISK}3"
 fi
@@ -42,7 +41,13 @@ if [[ $bootType == "uefi" ]]; then
     sudo mkdir -p /mnt/boot
     sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
 fi
-sudo swapon "${DISK}${NAME_DIVIDER}2"
+
+printf "\n=================== Making a swap file\n"
+sudo touch /mnt/.swapfile
+sudo dd if=/dev/zero of=/mnt/.swapfile bs=1M count=8192
+sudo chmod 600 /mnt/.swapfile
+sudo mkswap /mnt/.swapfile
+sudo swapon /mnt/.swapfile # using swapfile in the live ISO just in case
 
 printf "\n=================== Generating config files\n"
 sudo nixos-generate-config --root /mnt
