@@ -13,11 +13,7 @@
   # Bootloader.
   boot.loader.grub.enable = true;
   boot.loader.grub.useOSProber = true;
-  ## UEFI
-  # boot.loader.grub.device = "nodev";
-  # boot.loader.grub.efiSupport = true;
-  ## BIOS
-  boot.loader.grub.device = "/dev/vda";
+  ## GRUB dynamic configuration
 
   networking.hostName = "vm"; # Define your hostname.
   # networking.wireless.enable = true;  # Enables wireless support via wpa_supplicant.
