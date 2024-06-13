@@ -6,12 +6,12 @@ bootType="uefi"; # uefi/bios
 lsblk
 read -p "Insert the name of your disk (sda, sdb, etc):" DISK
 if [[ -z $DISK ]]; then
-    echo "Can't leave the name emtpy!"
+    printf "Can't leave the name emtpy!"
     exit 1
 fi
 DISK="/dev/$DISK"
 
-echo "\n=================== Partitioning\n"
+printf "\n=================== Partitioning\n"
 if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- mklabel gpt
     sudo parted "$DISK" -- mkpart root ext4 512MB -12GB
@@ -25,14 +25,14 @@ else
     sudo parted "$DISK" -- mkpart primary linux-swap -12GB 100%
 fi
 
-echo "\n=================== Formatting\n"
+printf "\n=================== Formatting\n"
 sudo mkfs.ext4 -L nixos "${DISK}1"
 sudo mkswap -L swap "${DISK}2"
 if [[ $bootType == "uefi" ]]; then
     sudo mkfs.fat -F 32 -n boot "${DISK}3"
 fi
 
-echo "\n=================== Installing\n"
+printf "\n=================== Installing\n"
 sudo mount /dev/disk/by-label/nixos /mnt
 if [[ $bootType == "uefi" ]]; then
     sudo mkdir -p /mnt/boot
@@ -41,16 +41,17 @@ if [[ $bootType == "uefi" ]]; then
 fi
 sudo swapon "${DISK}${NAME_DIVIDER}2"
 
-echo "\n=================== Generating config files\n"
+printf "\n=================== Generating config files\n"
 sudo nixos-generate-config --root /mnt
 
-echo "\n=================== final steps\n"
+printf "\n=================== final steps\n"
 if [[ ! $bootType == "uefi" ]]; then
+    printf "" # can't do empty blocks in bash
     ## set `boot.loader.grub.device = true`
 fi
 sudo nixos-install --no-root-passwd
 
-# echo "\n=================== Preparing the chroot environment\n"
+# printf "\n=================== Preparing the chroot environment\n"
 # sudo mount --bind /proc /mnt/proc
 # sudo mount --bind /dev /mnt/dev
 # sudo mount --bind /sys /mnt/sys
