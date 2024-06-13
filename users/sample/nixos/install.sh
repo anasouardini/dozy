@@ -7,7 +7,7 @@ configurationPath="/mnt/etc/nixos/configuration.nix";
 
 setfont ter-v22n
 
-lsblk
+lsblk -o name,serial,mountpoint,size,label,model
 read -p "Insert the name of your disk (sda, sdb, vda, etc):" DISK
 if [[ -z $DISK ]]; then
     printf "Can't leave the name emtpy!"
