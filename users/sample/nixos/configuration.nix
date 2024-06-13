@@ -58,6 +58,8 @@
     isNormalUser = true;
     description = "ven ego";
     extraGroups = [ "networkmanager" "wheel" ];
+    shell = pkgs.zsh;
+    initialHashedPassword = "venego";
     packages = with pkgs; [
       neovim
     ];
@@ -86,6 +88,7 @@
 
   # Enable the OpenSSH daemon.
   services.openssh.enable = true;
+  services.openssh.permitRootLogin = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
