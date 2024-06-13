@@ -3,13 +3,12 @@
 ## config
 bootType="bios"; # uefi/bios
 bootMenuType="grub"; # grub/systemd-boot
-# configurationPath="./users/sample/nixos/configuration.nix";
 configurationPath="/mnt/etc/nixos/configuration.nix";
 
 setfont ter-v22n
 
 lsblk
-read -p "Insert the name of your disk (sda, sdb, etc):" DISK
+read -p "Insert the name of your disk (sda, sdb, vda, etc):" DISK
 if [[ -z $DISK ]]; then
     printf "Can't leave the name emtpy!"
     exit 1
@@ -19,13 +18,13 @@ DISK="/dev/$DISK"
 printf "\n=================== Partitioning\n"
 if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- mklabel gpt
-    sudo parted "$DISK" -- mkpart root ext4 512MB -12GiB
+    sudo parted "$DISK" -- mkpart root ext4 512MiB -12GiB
     sudo parted "$DISK" -- mkpart swap linux-swap -12GiB 100%
     sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
     sudo parted "$DISK" -- set 3 esp on
 else
     sudo parted "$DISK" -- mklabel msdos
-    sudo parted "$DISK" -- mkpart primary ext4 1MB -12GiB
+    sudo parted "$DISK" -- mkpart primary ext4 1MiB -12GiB
     sudo parted "$DISK" -- set 1 boot on
     sudo parted "$DISK" -- mkpart primary linux-swap -12GiB 100%
 fi
@@ -53,12 +52,12 @@ sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/
 printf "\n=================== Modifying config files\n"
 if [[ $bootType == "uefi" ]]; then
     if [[ $bootMenuType == "grub" ]]; then
-        sed -i 's/## GRUB dynamic configuration/## UEFI GRUB configuration\n\tboot.loader.grub.device = "nodev";\n\tboot.loader.grub.efiSupport = true;/' $configurationPath;
+        sed -i 's/## GRUB dynamic configuration/## UEFI GRUB configuration\n  boot.loader.grub.device = "nodev";\n  boot.loader.grub.efiSupport = true;/' $configurationPath;
     else
-        sed -i 's/## GRUB dynamic configuration/## UEFI systemd-boot configuration\n\tboot.loader.systemd-boot.enable = true;/' $configurationPath;
+        sed -i 's/## GRUB dynamic configuration/## UEFI systemd-boot configuration\n  boot.loader.systemd-boot.enable = true;/' $configurationPath;
     fi
 else
-    sed -i 's/## GRUB dynamic configuration/## BIOS GRUB configuration\n\tboot.loader.grub.device = "\/dev\/vda";\n\tboot.loader.grub.useOSProber = true;/' $configurationPath;
+    sed -i 's/## GRUB dynamic configuration/## BIOS GRUB configuration\n  boot.loader.grub.device = "\/dev\/vda";\n  boot.loader.grub.useOSProber = true;/' $configurationPath;
 fi
 
 printf "\n=================== Installing\n"
