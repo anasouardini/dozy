@@ -65,7 +65,7 @@ else
 fi
 
 printf "\n=================== Installing\n"
-sudo nixos-install --no-root-passwd
+sudo nixos-install # --no-root-passwd
 
 # Might not be needed since most things can be done by
 # just dropping a config file to the target disk ¯\_(ツ)_/¯
