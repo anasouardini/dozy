@@ -42,17 +42,18 @@ if [[ $bootType == "uefi" ]]; then
     sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
 fi
 
-printf "\n=================== Making a swap file\n"
+printf "\n=================== Setting up a swap file\n"
 sudo touch /mnt/.swapfile
 sudo dd if=/dev/zero of=/mnt/.swapfile bs=1M count=8192
 sudo chmod 600 /mnt/.swapfile
 sudo mkswap /mnt/.swapfile
 sudo swapon /mnt/.swapfile # using swapfile in the live ISO just in case
+# TODO: add swapfile path to hardware-configuration.nix
 
 printf "\n=================== Generating config files\n"
 sudo nixos-generate-config --root /mnt
 sudo mv /mnt/etc/nixos/configuration.nix /mnt/etc/nixos/configuration.nix.bak
-sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/users/sample/nixos/configuration.nix
+sudo curl -o /mnt/etc/nixos/configuration.nix https://postinstaller.netlify.app/users/sample/nixos/configuration-basic.nix
 
 printf "\n=================== Modifying config files\n"
 if [[ $bootType == "uefi" ]]; then
@@ -69,6 +70,14 @@ printf "\n=================== Installing\n"
 sudo nixos-install
 # it'll ask for setting the root password. (--no-root-passwd) doesn't work
 # it'll unmount the /mnt (root filesystem)
+
+printf "\n=================== Flakes setup\n"
+mkdir -p /mnt/home/venego/.dotfiles
+sudo cp /mnt/etc/nixos/configuration.nix /mnt/home/venego/.dotfiles
+sudo cp /mnt/etc/nixos/hardware-configuration.nix /mnt/home/venego/.dotfiles
+# get flake.nix file
+## run in chroot
+# sudo nixos-rebuild switch --flake /home/venego/.dotfiles
 
 # Might not be needed since most things can be done by
 # just dropping a config file to the target disk ¯\_(ツ)_/¯
