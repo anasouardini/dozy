@@ -55,12 +55,9 @@ genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
 
 printf "\n=================== Chrooting\n"
-sudo mount --bind /proc /mnt/proc
-sudo mount --bind /dev /mnt/dev
-sudo mount --bind /sys /mnt/sys
 sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
 
-cat << EOF | sudo chroot /mnt /usr/bin/bash
+cat << EOF | sudo arch-chroot /mnt
 ln -sf /usr/share/zoneinfo/Africa/Casablanca /etc/localtime
 hwclock --systohc
 timedatectl set-ntp true
