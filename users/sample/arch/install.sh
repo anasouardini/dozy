@@ -2,8 +2,6 @@
 
 ## config
 bootType="bios"; # uefi/bios
-bootMenuType="grub"; # grub/systemd-boot
-configurationPath="/mnt/etc/nixos/configuration.nix";
 
 cd; # just in case
 setfont ter-v22n;
@@ -43,11 +41,11 @@ if [[ $bootType == "uefi" ]]; then
 fi
 
 printf "\n=================== Setting up a swap file\n"
-sudo touch /mnt/.swapfile
-sudo dd if=/dev/zero of=/mnt/.swapfile bs=1M count=8192 # 8 GiB
-sudo chmod 600 /mnt/.swapfile
-sudo mkswap /mnt/.swapfile
-sudo swapon /mnt/.swapfile # using swapfile in the live ISO just in case
+# sudo touch /mnt/.swapfile
+# sudo dd if=/dev/zero of=/mnt/.swapfile bs=1M count=8192 # 8GiB
+# sudo chmod 600 /mnt/.swapfile
+# sudo mkswap /mnt/.swapfile
+# sudo swapon /mnt/.swapfile # using swapfile in the live ISO just in case
 
 printf "\n=================== Pacstraping\n"
 pacstrap -K /mnt base linux linux-firmware intel-ucode base-devil grub ## installing the kernel and bassic tools
@@ -57,7 +55,7 @@ cat /mnt/etc/fstab
 printf "\n=================== Chrooting\n"
 sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
 
-cat << EOF | sudo arch-chroot /mnt
+cat << EOF | arch-chroot /mnt
 ln -sf /usr/share/zoneinfo/Africa/Casablanca /etc/localtime
 hwclock --systohc
 timedatectl set-ntp true
