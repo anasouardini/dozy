@@ -67,29 +67,31 @@ else
 fi
 
 printf "\n=================== Installing\n"
-sudo nixos-install
+sudo nixos-install --no-root-passwd
 # it'll ask for setting the root password. (--no-root-passwd) doesn't work
 # it'll unmount the /mnt (root filesystem)
 
-printf "\n=================== Flakes setup\n"
-mkdir -p /mnt/home/venego/.dotfiles
-sudo cp /mnt/etc/nixos/configuration.nix /mnt/home/venego/.dotfiles
-sudo cp /mnt/etc/nixos/hardware-configuration.nix /mnt/home/venego/.dotfiles
-# get flake.nix file
-## run in chroot
-# sudo nixos-rebuild switch --flake /home/venego/.dotfiles
 
-# Might not be needed since most things can be done by
-# just dropping a config file to the target disk ¯\_(ツ)_/¯
-# printf "\n=================== Preparing the chroot environment\n"
-# sudo mount /dev/disk/by-label/nixos /mnt
-# if [[ $bootType == "uefi" ]]; then
-#     sudo mkdir -p /mnt/boot
-#     sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
-# fi
-# sudo mount --bind /proc /mnt/proc
-# sudo mount --bind /dev /mnt/dev
-# sudo mount --bind /sys /mnt/sys
-# sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
-# chroot /mnt /nix/var/nix/profiles/system/activate
-# chroot /mnt /run/current-system/sw/bin/bash
+printf "\n=================== Preparing the chroot environment\n"
+sudo mount /dev/disk/by-label/nixos /mnt
+if [[ $bootType == "uefi" ]]; then
+    sudo mkdir -p /mnt/boot
+    sudo mount -o umask=077 /dev/disk/by-label/boot /mnt/boot
+fi
+
+sudo mount --bind /proc /mnt/proc
+sudo mount --bind /dev /mnt/dev
+sudo mount --bind /sys /mnt/sys
+sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
+sudo chroot /mnt /nix/var/nix/profiles/system/activate
+
+cat << EOF | sudo chroot /mnt /run/current-system/sw/bin/bash
+cd /home/venego
+# clone repo to .dotfiles
+sudo cp /etc/nixos/hardware-configuration.nix /home/venego/.dotfiles/
+sudo cp /etc/nixos/configuration.nix /home/venego/.dotfiles/
+# sudo nixos-rebuild switch --flake .
+# home-manager switch --flake .
+EOF
+
+# reboot
