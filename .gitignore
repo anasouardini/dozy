@@ -1,5 +1,4 @@
-deploy.sh
 node_modules
 packge.json
-*.yaml
 .vscode
+configuration-extra.nix
