@@ -78,11 +78,13 @@ su venego
 # TODO: run post-installation script
 # pacman -Syu
 # pacman -S --noconfirm neovim
-grub-install /dev/${DISK}
+# grub-install /dev/${DISK}
+grub-install --target=i386-pc /dev/${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg /dev/${DISK}
 exit
 passwd root
 passwd venego
+echo ${DISK}
 EOF
 
 umount -R /mnt
