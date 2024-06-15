@@ -36,7 +36,36 @@ NixOS makes it harder for the configuration.nix to be versatile, you might need 
 sh <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 ```
 
+
 ### FS Tree (Users List)
 ```bash
 ---- Users Tree
+├── anasouardini
+│   ├── arch
+│   │   └── install.sh
+│   ├── arch-archinstall
+│   │   ├── archinstall-installer.sh
+│   │   ├── user_configuration.json
+│   │   └── user_credentials.json
+│   ├── debian
+│   │   ├── dropper.sh
+│   │   └── installer.ts
+│   └── nixos
+└── sample
+    ├── arch
+    │   ├── install.sh
+    │   └── post-install.sh
+    ├── arch-archinstall
+    │   ├── archinstall-installer.sh
+    │   ├── user_configuration.json
+    │   └── user_credentials.json
+    ├── debian
+    │   ├── dropper.sh
+    │   └── installer.ts
+    ├── installer.ts
+    └── nixos
+        ├── configuration-extra.nix
+        ├── configuration.nix
+        ├── flake.nix
+        └── install.sh
 ```
