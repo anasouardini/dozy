@@ -99,7 +99,7 @@ grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
 # TODO: run post-installation script
-su ${username} -c "cd; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo "exec i3" >> .xinitrc exit;"
+su ${username} -c "cd; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo 'exec i3' >> .xinitrc exit;"
 # removing wild permissions
 sed -i 's/^\${username} ALL=(ALL:ALL) NOPASSWD: ALL$//' >> /etc/sudoers
 # convinient privileges
