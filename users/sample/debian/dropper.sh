@@ -10,11 +10,6 @@ fi
 
 host="https://dozy.netlify.app";
 
-# check args
-if [ -z $1 ]; then
-  printf "You haven't provided a username that was prefixed to your installer script!\n E.g: 'sample'";
-  exit 1;
-fi
 githubUsername='sample';
 shift;
 installerArgs=$@;
