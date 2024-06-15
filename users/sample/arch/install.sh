@@ -24,16 +24,14 @@ fi
 
 printf "\n=================== Partitioning\n"
 if [[ $bootType == "uefi" ]]; then
-    sudo parted "$DISK" -- mklabel gpt
-    sudo parted "$DISK" -- mkpart root ext4 512MiB 100%
-    sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
-    sudo parted "$DISK" -- set 2 esp on
+    yes yes | sudo parted "$DISK" -- mklabel gpt
+    yes yes | sudo parted "$DISK" -- mkpart root ext4 512MiB 100%
+    yes yes | sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
+    yes yes | sudo parted "$DISK" -- set 2 esp on
 else
-    # todo: use parted with no confirmation
-
     yes yes | sudo parted "$DISK" -- mklabel msdos
     # todo: need 1MB alignment
-    sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
+    yes yes | sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
     sudo parted "$DISK" -- set 1 boot on
 fi
 
@@ -42,7 +40,7 @@ yes y | sudo mkfs.ext4 -L root "${DISK}1"
 # sudo mkswap -L swap "${DISK}3"
 # sudo swapon "${DISK}${NAME_DIVIDER}2"
 if [[ $bootType == "uefi" ]]; then
-    sudo mkfs.fat -F 32 -n boot "${DISK}3"
+    yes y | sudo mkfs.fat -F 32 -n boot "${DISK}3"
 fi
 
 printf "\n=================== Mounting\n"
@@ -85,7 +83,7 @@ useradd -mG wheel ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 
-# grub-install ${DISK} ## todo: UEF method
+# grub-install ${DISK} ## todo: UEFI method
 grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
