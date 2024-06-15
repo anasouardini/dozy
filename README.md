@@ -29,3 +29,9 @@ sh <(curl -fsSL "https://postinstaller.netlify.app/users/sample/nixos/install.sh
 ```
 
 NixOS makes it harder for the configuration.nix to be versatile, you might need to tweak it a bit.
+
+Here is another one for arch:
+
+```bash
+sh <(curl -sfSL https://postinstaller.netlify.app/users/sample/arch/install.sh)
+```
