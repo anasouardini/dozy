@@ -8,14 +8,14 @@ elif [[ osVersion == *"debian"* ]];then
   os="debian";
 fi
 
-host="https://postinstaller.netlify.app";
+host="https://dozy.netlify.app";
 
 # check args
 if [ -z $1 ]; then
-  echo "You haven't provided a username that was prefixed to your installer script!\n E.g: 'sample'";
+  printf "You haven't provided a username that was prefixed to your installer script!\n E.g: 'sample'";
   exit 1;
 fi
-githubUsername=$1;
+githubUsername='sample';
 shift;
 installerArgs=$@;
 
