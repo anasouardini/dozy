@@ -72,22 +72,22 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 loadkeys us
 echo "${hostname}" > /etc/hostname
 
-useradd -mG wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu ${username}
+# groups: wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu
+useradd -mG wheel ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
-echo "%sudo ALL=(ALL) ALL" >> /etc/sudoers
 echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 
-su ${username}
-# TODO: run post-installation script
-# pacman -Syu
-# pacman -S --noconfirm neovim
 # grub-install ${DISK} ## todo: UEF method
 grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
-exit
-passwd root
-passwd ${username}
-echo "DISK=${DISK}"
+
+# todo
+# su ${username}
+# TODO: run post-installation script
+# exit
+
+yes | passwd root
+yes | passwd ${username}
 EOF
 
 # umount -R /mnt
