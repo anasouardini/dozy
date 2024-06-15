@@ -105,7 +105,7 @@ grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 # TODO: run post-installation script
 su ${username} -c "sh <(curl -sfSL https://postinstaller.netlify.app/users/sample/arch/post-install.sh)"
 # removing wild permissions
-sed -i 's/^\${username} ALL=(ALL:ALL) NOPASSWD: ALL$//' >> /etc/sudoers
+sed -i '/ALL=(ALL:ALL) NOPASSWD: ALL$/d' >> /etc/sudoers
 # convinient privileges
 echo "${username} ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 EOF
