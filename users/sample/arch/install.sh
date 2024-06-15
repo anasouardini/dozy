@@ -52,7 +52,7 @@ printf "\n=================== Setting up a swap file\n"
 
 printf "\n=================== Pacstraping\n"
 pacman -Syyu --noconfirm
-pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub ## installing the kernel and bassic tools
+pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub neovim adduser ## installing the kernel and bassic tools
 genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
 
@@ -72,7 +72,6 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 loadkeys us
 echo "${hostname}" > /etc/hostname
 
-pacman -S --noconfirm adduser
 adduser -mG wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 echo "%sudo ALL=(ALL) ALL" >> /etc/sudoers
@@ -91,5 +90,5 @@ passwd ${username}
 echo "DISK=${DISK}"
 EOF
 
-umount -R /mnt
+# umount -R /mnt
 # reboot
