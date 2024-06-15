@@ -22,7 +22,8 @@ if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- set 2 esp on
 else
     sudo parted "$DISK" -- mklabel msdos
-    sudo parted "$DISK" -- mkpart primary ext4 1MiB 100%
+    # todo: need 1MB alignment
+    sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
     sudo parted "$DISK" -- set 1 boot on
 fi
 
@@ -78,7 +79,7 @@ su venego
 # TODO: run post-installation script
 # pacman -Syu
 # pacman -S --noconfirm neovim
-# grub-install /dev/${DISK}
+# grub-install /dev/${DISK} ## todo: UEF method
 grub-install --target=i386-pc /dev/${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg /dev/${DISK}
 exit
