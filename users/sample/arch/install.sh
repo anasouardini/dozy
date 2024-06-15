@@ -32,7 +32,6 @@ if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- set 2 esp on
 else
     yes yes | sudo parted "$DISK" -- mklabel msdos
-    # todo: need 1MB alignment
     yes yes | sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
     sudo parted "$DISK" -- set 1 boot on
 fi
@@ -102,7 +101,6 @@ else
 fi
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
-# TODO: run post-installation script
 su ${username} -c "sh <(curl -sfSL https://postinstaller.netlify.app/users/sample/arch/post-install.sh)"
 # removing wild permissions
 sed -i '/ALL=(ALL:ALL) NOPASSWD: ALL$/d' >> /etc/sudoers
