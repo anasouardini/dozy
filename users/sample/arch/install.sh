@@ -27,12 +27,12 @@ else
 
     yes yes | sudo parted "$DISK" -- mklabel msdos
     # todo: need 1MB alignment
-    yes y | sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
+    sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
     sudo parted "$DISK" -- set 1 boot on
 fi
 
 printf "\n=================== Formatting\n"
-sudo mkfs.ext4 -L root "${DISK}1"
+yes y | sudo mkfs.ext4 -L root "${DISK}1"
 # sudo mkswap -L swap "${DISK}3"
 # sudo swapon "${DISK}${NAME_DIVIDER}2"
 if [[ $bootType == "uefi" ]]; then
