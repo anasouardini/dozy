@@ -24,6 +24,7 @@ if [[ -n $mounted ]]; then
 fi
 
 printf "\n=================== Partitioning\n"
+## todo: find a better solution than piping "yes" output to `parted`
 if [[ $bootType == "uefi" ]]; then
     yes yes | sudo parted "$DISK" -- mklabel gpt
     yes yes | sudo parted "$DISK" -- mkpart root ext4 512MiB 100%
@@ -94,8 +95,11 @@ echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 # This is required in case you're running this script through ssh
 echo "${username} ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers;
 
-# grub-install ${DISK} ## todo: UEFI method
-grub-install --target=i386-pc ${DISK}
+if [[ $bootType == "uefi" ]]; then
+    grub-install --target=x86_64-efi --efi-directory=/boot ${DISK}
+else
+    grub-install --target=i386-pc ${DISK}
+fi
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
 # TODO: run post-installation script
@@ -106,5 +110,5 @@ sed -i 's/^\${username} ALL=(ALL:ALL) NOPASSWD: ALL$//' >> /etc/sudoers
 echo "${username} ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 EOF
 
-# umount -R /mnt
-# reboot
+umount -R /mnt
+reboot
