@@ -22,7 +22,7 @@ You can, as well, pass any arguments to your script
 sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/dropper.sh") run check-env etc
 ```
 
-Here is simpler NixOS installer for a vm:
+### NixOS installer
 
 ```bash
 sh <(curl -fsSL "https://dozy.netlify.app/users/sample/nixos/install.sh")
@@ -30,8 +30,41 @@ sh <(curl -fsSL "https://dozy.netlify.app/users/sample/nixos/install.sh")
 
 NixOS makes it harder for the configuration.nix to be versatile, you might need to tweak it a bit.
 
-Here is another one for arch:
+### Arch installer
 
 ```bash
-sh <(curl -sfSL https://dozy.netlify.app/users/sample/arch/install.sh)
+sh <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
+```
+
+### FS Tree (Users List)
+```bash
+---- Users Tree
+├── anasouardini
+│   ├── arch
+│   │   └── install.sh
+│   ├── arch-archinstall
+│   │   ├── archinstall-installer.sh
+│   │   ├── user_configuration.json
+│   │   └── user_credentials.json
+│   ├── debian
+│   │   ├── dropper.sh
+│   │   └── installer.ts
+│   └── nixos
+└── sample
+    ├── arch
+    │   ├── install.sh
+    │   └── post-install.sh
+    ├── arch-archinstall
+    │   ├── archinstall-installer.sh
+    │   ├── user_configuration.json
+    │   └── user_credentials.json
+    ├── debian
+    │   ├── dropper.sh
+    │   └── installer.ts
+    ├── installer.ts
+    └── nixos
+        ├── configuration-extra.nix
+        ├── configuration.nix
+        ├── flake.nix
+        └── install.sh
 ```
