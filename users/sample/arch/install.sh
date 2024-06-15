@@ -16,6 +16,12 @@ if [[ -z $DISK ]]; then
 fi
 DISK="/dev/$DISK"
 
+mounted=$(mount | grep "${DISK}")
+if [[ -n $mounted ]]; then
+    printf "\n=================== Disk Is Mounted; Unmounting\n"
+    sudo umount -R /mnt
+fi
+
 printf "\n=================== Partitioning\n"
 if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- mklabel gpt
