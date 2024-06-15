@@ -87,11 +87,13 @@ sudo chroot /mnt /nix/var/nix/profiles/system/activate
 
 cat << EOF | sudo chroot /mnt /run/current-system/sw/bin/bash
 cd /home/venego
-# clone repo to .dotfiles
+git clone https://github.com/anasouardini/nixos-config .dotfiles
+cd ./.dotfiles
+git config --local status.showUntrackedFiles no
 sudo cp /etc/nixos/hardware-configuration.nix /home/venego/.dotfiles/
 sudo cp /etc/nixos/configuration.nix /home/venego/.dotfiles/
-# sudo nixos-rebuild switch --flake .
-# home-manager switch --flake .
+sudo nixos-rebuild switch --flake .
+home-manager switch --flake .
 EOF
 
 # reboot
