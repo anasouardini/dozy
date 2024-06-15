@@ -49,7 +49,7 @@ printf "\n=================== Setting up a swap file\n"
 
 printf "\n=================== Pacstraping\n"
 pacman -Syyu --noconfirm
-pacstrap -K /mnt base linux linux-firmware intel-ucode base-devil grub ## installing the kernel and bassic tools
+pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub ## installing the kernel and bassic tools
 genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
 
