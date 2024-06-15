@@ -92,7 +92,7 @@ grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
 # TODO: run post-installation script
-su ${username} -c "yes ${initialPassword} | sudo ls; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; exit;"
+su ${username} -c "cd; yes ${initialPassword} | sudo ls; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo "exec i3" >> .xinitrc exit;"
 EOF
 
 umount -R /mnt
