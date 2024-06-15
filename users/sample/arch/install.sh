@@ -92,6 +92,8 @@ grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 # TODO: run post-installation script
 # exit
 
+systemctl enable NetworkManager;
+
 yes root | passwd root
 yes ${username} | passwd ${username}
 EOF
