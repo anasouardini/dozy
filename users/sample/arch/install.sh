@@ -50,6 +50,11 @@ if [[ $bootType == "uefi" ]]; then
     sudo mount --mkdir -o umask=077 /dev/disk/by-label/boot /mnt/boot
 fi
 lsblk
+mounted=$(mount | grep "${DISK}")
+if [[ -z $mounted ]]; then
+    echo "=> Err: drive not mounted, formatting or partitioning went wrong";
+    exit 1;
+fi
 
 printf "\n=================== Setting up a swap file\n"
 # sudo touch /mnt/.swapfile
@@ -86,14 +91,19 @@ echo "${hostname}" > /etc/hostname
 useradd -mG wheel ${username}
 yes ${initialPassword} | passwd ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
-echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
+# This is required in case you're running this script through ssh
+echo "${username} ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers;
 
 # grub-install ${DISK} ## todo: UEFI method
 grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
 # TODO: run post-installation script
-su ${username} -c "cd; yes ${initialPassword} | sudo ls; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo "exec i3" >> .xinitrc exit;"
+su ${username} -c "cd; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo "exec i3" >> .xinitrc exit;"
+# removing wild permissions
+sed -i 's/^\${username} ALL=(ALL:ALL) NOPASSWD: ALL$//' >> /etc/sudoers
+# convinient privileges
+echo "${username} ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 EOF
 
 # umount -R /mnt
