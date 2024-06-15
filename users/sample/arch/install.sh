@@ -49,6 +49,7 @@ sudo mount /dev/disk/by-label/root /mnt
 if [[ $bootType == "uefi" ]]; then
     sudo mount --mkdir -o umask=077 /dev/disk/by-label/boot /mnt/boot
 fi
+lsblk
 
 printf "\n=================== Setting up a swap file\n"
 # sudo touch /mnt/.swapfile
@@ -95,5 +96,5 @@ grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 su ${username} -c "cd; yes ${initialPassword} | sudo ls; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; echo "exec i3" >> .xinitrc exit;"
 EOF
 
-umount -R /mnt
-reboot
+# umount -R /mnt
+# reboot
