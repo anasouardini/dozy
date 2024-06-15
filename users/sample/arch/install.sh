@@ -72,6 +72,7 @@ echo "KEYMAP=us" > /etc/vconsole.conf
 loadkeys us
 echo "${hostname}" > /etc/hostname
 
+pacman -S --noconfirm adduser
 adduser -mG wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 echo "%sudo ALL=(ALL) ALL" >> /etc/sudoers
