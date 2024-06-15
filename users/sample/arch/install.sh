@@ -2,6 +2,8 @@
 
 ## config
 bootType="bios"; # uefi/bios
+username="venego";
+hostname="i5";
 
 cd; # just in case
 setfont ter-v22n;
@@ -68,24 +70,24 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 echo "KEYMAP=us" > /etc/vconsole.conf
 
 loadkeys us
-echo "i5" > /etc/hostname
+echo "${hostname}" > /etc/hostname
 
-adduser -mG wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu venego
+adduser -mG wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 echo "%sudo ALL=(ALL) ALL" >> /etc/sudoers
-echo "%venego ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
+echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 
-su venego
+su ${username}
 # TODO: run post-installation script
 # pacman -Syu
 # pacman -S --noconfirm neovim
-# grub-install /dev/${DISK} ## todo: UEF method
-grub-install --target=i386-pc /dev/${DISK}
-grub-mkconfig -o /boot/grub/grub.cfg /dev/${DISK}
+# grub-install ${DISK} ## todo: UEF method
+grub-install --target=i386-pc ${DISK}
+grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 exit
 passwd root
-passwd venego
-echo ${DISK}
+passwd ${username}
+echo "DISK=${DISK}"
 EOF
 
 umount -R /mnt
