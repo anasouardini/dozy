@@ -23,9 +23,11 @@ if [[ $bootType == "uefi" ]]; then
     sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
     sudo parted "$DISK" -- set 2 esp on
 else
-    sudo parted "$DISK" -- mklabel msdos
+    # todo: use parted with no confirmation
+
+    yes yes | sudo parted "$DISK" -- mklabel msdos
     # todo: need 1MB alignment
-    sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
+    yes y | sudo parted "$DISK" -- mkpart primary ext4 2MiB 100%
     sudo parted "$DISK" -- set 1 boot on
 fi
 
@@ -86,9 +88,9 @@ grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 # TODO: run post-installation script
 # exit
 
-yes | passwd root
-yes | passwd ${username}
+yes root | passwd root
+yes ${username} | passwd ${username}
 EOF
 
-# umount -R /mnt
-# reboot
+umount -R /mnt
+reboot
