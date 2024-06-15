@@ -48,7 +48,7 @@ printf "\n=================== Setting up a swap file\n"
 # sudo swapon /mnt/.swapfile # using swapfile in the live ISO just in case
 
 printf "\n=================== Pacstraping\n"
-pacman -Syyu
+pacman -Syyu --noconfirm
 pacstrap -K /mnt base linux linux-firmware intel-ucode base-devil grub ## installing the kernel and bassic tools
 genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
