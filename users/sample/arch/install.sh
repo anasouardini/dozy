@@ -3,6 +3,7 @@
 ## config
 bootType="bios"; # uefi/bios
 username="venego";
+initialPassword="venego";
 hostname="i5";
 
 cd; # just in case
@@ -66,6 +67,8 @@ cat /mnt/etc/fstab
 printf "\n=================== Chrooting\n"
 sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
 cat << EOF | arch-chroot /mnt
+yes root | passwd root
+
 ln -sf /usr/share/zoneinfo/Africa/Casablanca /etc/localtime
 hwclock --systohc
 timedatectl set-ntp true
@@ -80,6 +83,7 @@ echo "${hostname}" > /etc/hostname
 
 # groups: wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu
 useradd -mG wheel ${username}
+yes ${initialPassword} | passwd ${username}
 echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" >> /etc/sudoers
 
@@ -87,22 +91,15 @@ echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/power
 grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
-# todo
-# su ${username}
+su ${username}
+yes ${initialPassword} | sudo ls; # recording password in session
 # TODO: run post-installation script
-# exit
+sudo pacman -S xorg-xinit i3-wm --noconfirm
+exit
 
 systemctl enable NetworkManager;
 
-yes root | passwd root
-yes ${username} | passwd ${username}
 EOF
 
 umount -R /mnt
 reboot
-
-# logs from pacman -Syyu
-# :: Proceed with installation? [Y/n]
-# error: Partition / too full: 158262 blocks needed, 63229 blocks free
-# error: failed to commit transaction (not enough free disk space)
-# Errors occurred, no packages were upgraded.
