@@ -91,14 +91,8 @@ echo "%${username} ALL=(ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/power
 grub-install --target=i386-pc ${DISK}
 grub-mkconfig -o /boot/grub/grub.cfg ${DISK}
 
-su ${username}
-yes ${initialPassword} | sudo ls; # recording password in session
 # TODO: run post-installation script
-sudo pacman -S xorg-xinit i3-wm --noconfirm
-exit
-
-systemctl enable NetworkManager;
-
+su ${username} -c "yes ${initialPassword} | sudo ls; sudo pacman -S xorg-xinit i3-wm networkmanager --noconfirm; systemctl enable NetworkManager; exit;"
 EOF
 
 umount -R /mnt
