@@ -5,7 +5,7 @@ My collections of Linux automation scripts, I'd appreaciate it if you share your
 ### usage
 
 ```bash
-sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/dropper.sh")
+sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh")
 ```
 
 That will only run a sample script for a quick demo:
@@ -19,7 +19,7 @@ feel free to add your own directory with installation script(s) to this reposito
 You can, as well, pass any arguments to your script
 
 ```bash
-sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/dropper.sh") run check-env etc
+sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh") run check-env etc
 ```
 
 ### NixOS installer
@@ -44,25 +44,24 @@ sh <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 │   ├── arch
 │   │   └── install.sh
 │   ├── arch-archinstall
-│   │   ├── archinstall-installer.sh
+│   │   ├── install.sh
 │   │   ├── user_configuration.json
 │   │   └── user_credentials.json
 │   ├── debian
-│   │   ├── dropper.sh
-│   │   └── installer.ts
+│   │   ├── installer.ts
+│   │   └── install.sh
 │   └── nixos
 └── sample
     ├── arch
     │   ├── install.sh
     │   └── post-install.sh
     ├── arch-archinstall
-    │   ├── archinstall-installer.sh
+    │   ├── install.sh
     │   ├── user_configuration.json
     │   └── user_credentials.json
     ├── debian
-    │   ├── dropper.sh
-    │   └── installer.ts
-    ├── installer.ts
+    │   ├── installer.ts
+    │   └── install.sh
     └── nixos
         ├── configuration-extra.nix
         ├── configuration.nix
