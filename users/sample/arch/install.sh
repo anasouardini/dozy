@@ -27,7 +27,7 @@ if [[ $bootType == "uefi" ]]; then
     yes yes | sudo parted "$DISK" -- mklabel gpt
     yes yes | sudo parted "$DISK" -- mkpart root ext4 512MiB 100%
     yes yes | sudo parted "$DISK" -- mkpart ESP fat32 1MiB 512MiB
-    yes yes | sudo parted "$DISK" -- set 2 esp on
+    sudo parted "$DISK" -- set 2 esp on
 else
     yes yes | sudo parted "$DISK" -- mklabel msdos
     # todo: need 1MB alignment
@@ -58,13 +58,13 @@ printf "\n=================== Setting up a swap file\n"
 
 printf "\n=================== Pacstraping\n"
 pacman -Syyu --noconfirm
-pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub neovim ## installing the kernel and bassic tools
+## installing the kernel and bassic tools
+pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub neovim networkmanager
 genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
 
 printf "\n=================== Chrooting\n"
 sudo cp /etc/resolv.conf /mnt/etc/resolv.conf # dns might not be sat correctly (it's a common problem)
-
 cat << EOF | arch-chroot /mnt
 ln -sf /usr/share/zoneinfo/Africa/Casablanca /etc/localtime
 hwclock --systohc
@@ -98,3 +98,9 @@ EOF
 
 umount -R /mnt
 reboot
+
+# logs from pacman -Syyu
+# :: Proceed with installation? [Y/n]
+# error: Partition / too full: 158262 blocks needed, 63229 blocks free
+# error: failed to commit transaction (not enough free disk space)
+# Errors occurred, no packages were upgraded.
