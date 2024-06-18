@@ -993,7 +993,13 @@ function handleFullArgs(args: string) {
   if (args.includes(':')) {
     const [key, value] = args.split(':');
     // todo: parse value types
-    defaultArgs[args].value = value;
+    if(typeof value == 'number'){
+      defaultArgs[key].value = parseInt(value);
+    }else if(value === "false" || value === "true"){
+      defaultArgs[key].value = !!value;
+    }else if(typeof value == 'string'){
+      defaultArgs[key].value = value;
+    }
   } else {
     defaultArgs[args].value = true;
   }
@@ -1047,6 +1053,7 @@ function listApps() {
 
 const main = async () => {
   const args = parseArgs();
+  console.log({args})
 
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     listApps: () => {
