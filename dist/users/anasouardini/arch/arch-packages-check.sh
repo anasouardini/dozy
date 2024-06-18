@@ -7,17 +7,17 @@ apps="rsync bluez bluez-tools pulseaudio-module-bluetooth pipewire pipewire-puls
 # sudo usermod -aG libvirt $(whoami)
 # sudo systemctl enable --now libvirtd
 
-echo "---------- APPS that don't exist in arch:"
-for app in $apps; do
-    exists=$(sudo pacman -Ssq $app | grep "$app");
+# echo "---------- APPS that don't exist in arch:"
+# for app in $apps; do
+#     exists=$(sudo pacman -Ssq $app | grep "$app");
 
-    if [[ -z $exists ]]; then
-        exists=$(sudo yay -Ssq $app | grep "$app");
-        if [[ -z $exists ]]; then
-            echo $app
-        fi
-    fi
-done
+#     if [[ -z $exists ]]; then
+#         exists=$(sudo yay -Ssq $app | grep "$app");
+#         if [[ -z $exists ]]; then
+#             echo $app
+#         fi
+#     fi
+# done
 
 ## -------------- not found
 # pulseaudio-module-bluetooth => pulseaudio
@@ -34,15 +34,15 @@ done
 # qemu-utils => qemu
 # virtinst => virt-manager
 # pinentry-qt => pinentry
-# policykit-1-gnome => policykit-1
+# policykit-1-gnome => polkit
 # brave-browser => brave
 # google-chrome-stable => google-chrome
 # plexmediaserver => plex-media-server
-# myql => 
-# libnotify-bin
-# suckless-tools
+# mysql => mysql
+# libnotify-bin => libnotify
+# suckless-tools => dmenu
 
-altApps="pulseaudio netplan hping gcc fd gptfdisk android-tools docker qemu virt-manager pinentry policykit-1 brave google-chrome plex-media-server libnotify suchless-tools";
+altApps="pulseaudio netplan hping gcc libx11 fd gptfdisk android-tools docker qemu virt-manager pinentry polkit brave google-chrome plex-media-server mysql libnotify dmenu";
 echo "----------- Alt Apps that dont exist in arch:"
 for app in $altApps; do
     exists=$(sudo pacman -Ssq $app | grep "$app");
