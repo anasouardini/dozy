@@ -7,7 +7,7 @@ apps="rsync bluez bluez-tools pulseaudio-module-bluetooth pipewire pipewire-puls
 # sudo usermod -aG libvirt $(whoami)
 # sudo systemctl enable --now libvirtd
 
-echo "---------- APPS that don't exist in arch mirros:"
+echo "---------- APPS that don't exist in arch:"
 for app in $apps; do
     exists=$(sudo pacman -Ssq $app | grep "$app");
 
@@ -43,10 +43,13 @@ done
 # suckless-tools
 
 altApps="pulseaudio netplan hping gcc fd gptfdisk android-tools docker qemu virt-manager pinentry policykit-1 brave google-chrome plex-media-server libnotify suchless-tools";
-echo "----------- Alt Apps that exist in arch mirrors:"
+echo "----------- Alt Apps that dont exist in arch:"
 for app in $altApps; do
     exists=$(sudo pacman -Ssq $app | grep "$app");
-    if [[ -n $exists ]]; then
-        echo $app
+    if [[ -z $exists ]]; then
+        exists=$(sudo yay -Ssq $app | grep "$app");
+        if [[ -z $exists ]]; then
+            echo $app
+        fi
     fi
 done
