@@ -945,26 +945,28 @@ async function runSteps() {
         continue;
       }
 
-      const cmdList = substep.cmd;
-      if (!config.dryRun && Array.isArray(cmdList)) {
-        for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
-          const cmd = cmdList[cmdIndex];
+      if (substep.cmd) {
+        const cmdList = substep.cmd;
+        if (!config.dryRun && Array.isArray(cmdList)) {
+          for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
+            const cmd = cmdList[cmdIndex];
 
-          try {
-            print.title(
-              `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
-                0,
-                21,
-              )}..."`,
-            );
-            command(cmd);
-          } catch (err) {
-            log({
-              orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
-                }.${substepsList.length}.${cmdList.length}`,
-              title: `running ${cmd}`,
-              msg: `${err}`,
-            });
+            try {
+              print.title(
+                `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
+                  0,
+                  21,
+                )}..."`,
+              );
+              command(cmd);
+            } catch (err) {
+              log({
+                orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
+                  }.${substepsList.length}.${cmdList.length}`,
+                title: `running ${cmd}`,
+                msg: `${err}`,
+              });
+            }
           }
         }
       }
