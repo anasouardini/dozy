@@ -643,9 +643,8 @@ const steps: Steps[] = [
     title: 'editors',
     substeps: [
       {
-        title: 'installing lazyvim from repo',
+        title: 'installing lazyvim from source',
         enabled: false,
-        apps: ['lazyvim (nvm)'],
         cmd: [
           'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
           'rm -rf $HOME/.config/nvim/.git',
