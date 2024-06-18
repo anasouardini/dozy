@@ -990,7 +990,7 @@ function handleShortArgs(args: string) {
 }
 
 function handleFullArgs(args: string) {
-  // console.log(args)
+  console.log(args)
   if (args.includes(':')) {
     const [key, value] = args.split(':');
     // todo: parse value types

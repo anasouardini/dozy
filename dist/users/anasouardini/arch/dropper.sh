@@ -61,4 +61,5 @@ if [ ! $? -eq 0 ]; then
 fi
 echo "fetching [${host}/users/${githubUsername}/arch/installer.ts)";
 curl -fsSL "${host}/users/${githubUsername}/arch/installer.ts" -o $installerPath;
+echo "running the post-installation with args: [${installerArgs}]";
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;
