@@ -25,7 +25,7 @@ const config = {
   defaults: {
     template: 'desktop',
   },
-  archConfigUrl: 'https://postinstaller.netlify.app/users/anasouardini'
+  installCommandPrefix: "sudo pacman -S --noconfirm"
 };
 config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
@@ -233,43 +233,19 @@ const steps: Steps[] = [
     title: 'Updating sources and packages',
     substeps: [
       {
-        title: 'updating and upgrading',
-        cmd: ['sudo apt update -y'],
+        title: 'updating',
+        cmd: ['sudo pacman -Syyu --noconfirm'],
       },
     ],
   },
   {
     category: 'common',
-    title: 'installing apt config dependencies',
+    title: 'rsync is needed to restore configs',
     substeps: [
       {
         apps: ['rsync'],
       },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'restore config',
-    substeps: [
-      {
-        title: 'restore apt config',
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
-        ],
-      },
-      {
-        title: 'restore keyrings for apt',
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
-          `mkdir -p $HOME/.local/share;`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.local/share/keyrings $HOME/.local/share/`,
-        ],
-      },
-      {
-        title: 'updating repositories',
-        cmd: ['sudo apt update -y;'],
-      },
-    ],
+    ]
   },
   {
     category: 'common',
@@ -285,10 +261,10 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
-    title: 'Wrapper for apt, a better way of installing packages.',
+    title: 'aur package manager',
     substeps: [
       {
-        apps: ['nala'],
+        apps: ['yay'],
       },
     ],
   },
@@ -363,6 +339,7 @@ const steps: Steps[] = [
       {
         apps: [
           'xorg',
+          'xorg-xinit',
           'xinput',
           'arandr',
           'xdo',
@@ -827,13 +804,21 @@ const steps: Steps[] = [
       },
     ],
   },
+  {
+    category: 'desktop',
+    title: 'configuring permissions',
+    substeps: [
+      {
+        cmd: [
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;'
+        ],
+      },
+    ],
+  }
 ];
 // todo: install lazygit
 
 const manualSteps = [
-  'disable password for reboot and shutdown',
-  ' - add the following to /etc/sudoers:',
-  ' - %username ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt',
   're-login for the default shell to be set',
   'add core2 (home server) to /etc/hosts',
   'edit grub (reduce tiemout)',
@@ -897,7 +882,7 @@ async function runSteps() {
           print.title(`${appIndex + 1} / ${appsList.length} - [app] ${app}`);
           if (!config.dryRun) {
             try {
-              command(`sudo apt install ${app} -y`);
+              command(`${config.installCommandPrefix} ${app}`);
             } catch (err) {
               log({
                 orderStr: `${appIndex + 1} / ${appsList.length}`,
@@ -971,15 +956,11 @@ type Args = {
   dryRun: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
   list: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
   listDisabledSteps: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
-  installOS: { value: '' | 'archlinux' | 'debian', dependencies?: string[], dependencyOf?: string[] },
 };
 //! order matters
 const defaultArgs: Args = {
   help: {
     value: false
-  },
-  installOS: {
-    value: ''
   },
   run: {
     value: false
@@ -1067,6 +1048,9 @@ const main = async () => {
   const args = parseArgs();
 
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
+    listApps: () => {
+      // listApps();
+    },
     // list steps
     list: ({ includeDisabled }: { includeDisabled: string }) => {
       // console.log({ includeDisabled: Boolean(includeDisabled) })
@@ -1095,12 +1079,6 @@ const main = async () => {
 
       await runSteps();
     },
-    installOS: () => {
-      if (args.installOS.value == 'archlinux') {
-        print.info('installing archlinux...');
-        command(`archinstall --config ${config.archConfigUrl}/user_configuration.json --credentials ${config.archConfigUrl}/user_credentials.json`);
-      }
-    }
   };
 
   for (const argKey of Object.keys(args)) {

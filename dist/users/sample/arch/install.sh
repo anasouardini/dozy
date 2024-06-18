@@ -52,7 +52,7 @@ fi
 printf "\n=================== Mounting\n"
 sudo mount /dev/disk/by-label/root /mnt
 if [[ $bootType == "uefi" ]]; then
-    sudo mount --mkdir -o umask=077 /dev/disk/by-label/boot /mnt/boot
+    sudo mount --mkdir -o umask=077 /dev/disk/by-label/boot /mnt/boot/efi
 fi
 lsblk
 mounted=$(mount | grep "${DISK}")
@@ -71,7 +71,7 @@ printf "\n=================== Setting up a swap file\n"
 printf "\n=================== Pacstraping\n"
 pacman -Syyu --noconfirm
 ## installing the kernel and bassic tools
-pacstrap -K /mnt base linux linux-firmware intel-ucode base-devel grub neovim networkmanager
+pacstrap -K /mnt base linux linux-firmware
 genfstab -U /mnt >> /mnt/etc/fstab # add /mnt to fstab by UUID
 cat /mnt/etc/fstab
 
@@ -90,7 +90,10 @@ echo "LANG=en_US.UTF-8" > /etc/locale.conf
 echo "KEYMAP=us" > /etc/vconsole.conf
 
 loadkeys us
-echo "${hostname}" > /etc/hostname
+echo "${hostname}" >> /etc/hostname
+echo "127.0.0.1 localhost" >> /etc/hostname
+echo "::1 localhost" >> /etc/hostname
+echo "127.0.1.1 ${hostname}.localdomain ${hostname}" >> /etc/hostname
 
 # groups: wheel,sudo,power,users,netdev,video,audio,libvirt,keyd,libvirt-qemu
 useradd -mG wheel ${username}
@@ -99,8 +102,11 @@ echo "%wheel ALL=(ALL) ALL" >> /etc/sudoers
 # This is required in case you're running this script through ssh
 echo "${username} ALL=(ALL:ALL) NOPASSWD: ALL" >> /etc/sudoers;
 
+pacman -S grub;
 if [[ $bootType == "uefi" ]]; then
-    grub-install --target=x86_64-efi --efi-directory=/boot ${DISK}
+    pacman -S efibootmgr;
+    grub-install --target=x86_64-efi --efi-directory=/boot/efi --bootloader-id=GRUB ${DISK}
+    # if usb add '--removable --recheck' before the disk name
 else
     grub-install --target=i386-pc ${DISK}
 fi
