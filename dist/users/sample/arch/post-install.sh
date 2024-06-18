@@ -28,4 +28,4 @@ sudo systemctl enable sddm
 paci rsync vim neovim;
 
 # AUR tools
-paci base-devel yay git;
+paci base-devel git;
