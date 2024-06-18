@@ -990,14 +990,15 @@ function handleShortArgs(args: string) {
 }
 
 function handleFullArgs(args: string) {
+  console.log(args)
   if (args.includes(':')) {
     const [key, value] = args.split(':');
     // todo: parse value types
-    if(typeof value == 'number'){
+    if (parseInt(value)) {
       defaultArgs[key].value = parseInt(value);
-    }else if(value === "false" || value === "true"){
-      defaultArgs[key].value = !!value;
-    }else if(typeof value == 'string'){
+    } else if (value === "false" || value === "true") {
+      defaultArgs[key].value = JSON.parse(value);
+    } else {
       defaultArgs[key].value = value;
     }
   } else {
@@ -1053,7 +1054,7 @@ function listApps() {
 
 const main = async () => {
   const args = parseArgs();
-  console.log({args})
+  console.log({ args })
 
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     listApps: () => {
