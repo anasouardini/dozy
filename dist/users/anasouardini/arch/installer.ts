@@ -25,7 +25,8 @@ const config = {
   defaults: {
     template: 'desktop',
   },
-  installCommandPrefix: "sudo pacman -S --noconfirm"
+  installCommandPrefix: "sudo pacman -S --noconfirm",
+  installAURCommandPrefix: "sudo pacman -S --noconfirm"
 };
 config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
@@ -860,7 +861,11 @@ async function runSteps() {
           print.title(`${appIndex + 1} / ${appsList.length} - [app] ${app}`);
           if (!config.dryRun) {
             try {
-              command(`${config.installCommandPrefix} ${app}`);
+              if(app.includes('aur.')){
+                command(`${config.installAURCommandPrefix} ${app.split('aur.')[1]}`);
+              }else{
+                command(`${config.installCommandPrefix} ${app}`);
+              }
             } catch (err) {
               log({
                 orderStr: `${appIndex + 1} / ${appsList.length}`,
