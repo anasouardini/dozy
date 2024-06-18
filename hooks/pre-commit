@@ -2,7 +2,7 @@
 
 ## get current path
 root="$(dirname $0)/..";
-treeView=$(tree "${root}/users" | sed '1d' | head -n -1);
+treeView=$(tree "${root}/dist/users" | sed '1d' | head -n -1);
 # sed -i "/----.*----/d" "${root}/README.md"
 sed -i "/---- Users Tree/,/^\`\`\`/d" "${root}/README.md"
 printf "\n---- Users Tree\n${treeView}\n\`\`\`\n" | sed '1d' | tee -a "${root}/README.md"
