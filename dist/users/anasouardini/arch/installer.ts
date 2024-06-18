@@ -729,7 +729,7 @@ const steps: Steps[] = [
     category: 'desktop',
     substeps: [
       {
-        cmd: [ 
+        cmd: [
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME;`, // we don't need this in a temporary VM
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home/scripts $HOME/home/;`,
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.config $HOME/;`,
@@ -1018,12 +1018,39 @@ function parseArgs() {
   return defaultArgs;
 }
 
+function listApps() {
+  let appsListOutput = "";
+
+  const stepsList = steps;
+  for (let stepIndex = 0; stepIndex < stepsList.length; stepIndex++) {
+    const step = stepsList[stepIndex];
+    const substepsList = step.substeps;
+    for (
+      let substepIndex = 0;
+      substepIndex < substepsList.length;
+      substepIndex++
+    ) {
+      const substep = substepsList[substepIndex];
+      if (substep.apps) {
+        for (let appIndex = 0; appIndex < substep.apps.length; appIndex++) {
+          const appsList = substep.apps;
+          const app = substep.apps[appIndex];
+          appsListOutput += ` ${app}`;
+          // console.log(app);
+        }
+      }
+    }
+  }
+
+  console.log(appsListOutput)
+}
+
 const main = async () => {
   const args = parseArgs();
 
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     listApps: () => {
-      // listApps();
+      listApps();
     },
     // list steps
     list: ({ includeDisabled }: { includeDisabled: string }) => {
@@ -1043,7 +1070,7 @@ const main = async () => {
       print.info('WIP :)');
     },
     run: async () => {
-      if (args.check && false) { // temporarily disable checking (testing in temporary VM)
+      if (args.check) { // temporarily disable checking (testing in temporary VM)
         print.info('setting up environment...');
         const env = loadEnv();
         if (!env.allSet) {
@@ -1058,6 +1085,7 @@ const main = async () => {
   for (const argKey of Object.keys(args)) {
     const arg = args[argKey];
     if (!arg.dependencyOf) {
+      if (arg.value == false) { continue; }
       await options[argKey]();
     }
   }
