@@ -11,7 +11,6 @@ fi
 host="https://dozy.netlify.app";
 
 githubUsername='anasouardini';
-shift;
 installerArgs=$@;
 
 # make sure curl is there
