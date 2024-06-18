@@ -59,5 +59,6 @@ if [ ! $? -eq 0 ]; then
   echo "installing unzip...";
   sudo pacman -S unzip --noconfirm
 fi
-curl -fsSL "${host}/users/${githubUsername}/installer.ts" -o $installerPath;
+echo "fetching [${host}/users/${githubUsername}/arch/installer.ts)";
+curl -fsSL "${host}/users/${githubUsername}/arch/installer.ts" -o $installerPath;
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;
