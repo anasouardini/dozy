@@ -53,11 +53,11 @@ if [ -f $installerPath ]; then
   rm -rf $installerPath;
 fi
 
-curl -fsSL "${host}/users/${githubUsername}/installer.ts" -o $installerPath;
 echo "running the post-installation script";
 type unzip > /dev/null 2>&1;
 if [ ! $? -eq 0 ]; then
   echo "installing unzip...";
   sudo pacman -S unzip --noconfirm
 fi
+curl -fsSL "${host}/users/${githubUsername}/installer.ts" -o $installerPath;
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;
