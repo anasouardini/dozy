@@ -40,31 +40,5 @@ sh <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 ### FS Tree (Users List)
 ```bash
 ---- Users Tree
-├── anasouardini
-│   ├── arch
-│   │   └── install.sh
-│   ├── arch-archinstall
-│   │   ├── install.sh
-│   │   ├── user_configuration.json
-│   │   └── user_credentials.json
-│   ├── debian
-│   │   ├── installer.ts
-│   │   └── install.sh
-│   └── nixos
-└── sample
-    ├── arch
-    │   ├── install.sh
-    │   └── post-install.sh
-    ├── arch-archinstall
-    │   ├── install.sh
-    │   ├── user_configuration.json
-    │   └── user_credentials.json
-    ├── debian
-    │   ├── installer.ts
-    │   └── install.sh
-    └── nixos
-        ├── configuration-extra.nix
-        ├── configuration.nix
-        ├── flake.nix
-        └── install.sh
+
 ```
