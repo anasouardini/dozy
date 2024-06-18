@@ -8,6 +8,8 @@ for app in $apps; do
 
     if [[ -z $exists ]]; then
         exists=$(sudo yay -Ssq $app | grep "$app");
-        echo $app
+        if [[ -z $exists ]]; then
+            echo $app
+        fi
     fi
 done
