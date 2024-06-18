@@ -240,6 +240,20 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'adding AUR tools',
+    substeps: [
+      {
+        title: 'updating',
+        apps: ['base-devel', 'git'],
+        cmd: [
+          'git clone https://aur.archlinux.org/yay-bin.git',
+          'cd yay-bin && makepkg -si --noconfirm'
+        ]
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'rsync is needed to restore configs',
     substeps: [
       {
@@ -256,15 +270,6 @@ const steps: Steps[] = [
         cmd: [
           `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`,
         ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'aur package manager',
-    substeps: [
-      {
-        apps: ['yay'],
       },
     ],
   },
@@ -301,7 +306,7 @@ const steps: Steps[] = [
     substeps: [
       {
         apps: [
-          'network-manager',
+          'networkmanager',
           // "wondershaper",
           'wget',
           'curl',
@@ -340,12 +345,12 @@ const steps: Steps[] = [
         apps: [
           'xorg',
           'xorg-xinit',
-          'xinput',
+          // 'xinput', comes with xorg
+          'aur.xbanish',
           'arandr',
           'xdo',
           'xdotool',
           'xclip',
-          'xbanish',
         ],
       },
     ],
@@ -364,7 +369,7 @@ const steps: Steps[] = [
             mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
             LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*'); \\
             curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_\${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"; \\
-            tar xf lazygit.tar.gz lazygit; \\
+            tar -xvzf lazygit.tar.gz lazygit; \\
             sudo install lazygit /usr/local/bin;
           `,
         ],
@@ -380,7 +385,7 @@ const steps: Steps[] = [
           'vlc',
           'yt-dlp',
           'flameshot',
-          'simplescreenrecorder',
+          'aur.simplescreenrecorder',
           'zathura',
           'zathura-pdf-poppler',
           // "obs-studio",
@@ -423,7 +428,7 @@ const steps: Steps[] = [
     title: 'basic tools',
     substeps: [
       {
-        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'],
+        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'whois', 'fzf'],
       },
     ],
   },
@@ -433,7 +438,7 @@ const steps: Steps[] = [
     substeps: [
       {
         title: 'partitioning, resizing, etc',
-        apps: ['dosfstools', 'sgdisk', 'lvm2', 'smartmontools'],
+        apps: ['dosfstools', 'gptfdisk', 'lvm2', 'smartmontools'],
       },
       {
         enabled: false,
@@ -495,7 +500,7 @@ const steps: Steps[] = [
       {
         title: 'a password prompt for privs escalation (for GUI apps)',
         apps: ['lxqt-policykit'],
-        cmd: ['sudo echo "pintentry-program /usr/bin/lxqt-policykit-agent" > ~/.gnupg/gpg-agent.conf'],
+        // cmd: ['sudo echo "pintentry-program /usr/bin/lxqt-policykit-agent" > ~/.gnupg/gpg-agent.conf'],
       },
     ],
   },
@@ -504,7 +509,7 @@ const steps: Steps[] = [
     title: 'notifications',
     substeps: [
       {
-        apps: ['dbus-x11', 'notification-daemon', 'libnotify', 'dunst'],
+        apps: ['dbus', 'notification-daemon', 'libnotify', 'dunst'],
       },
     ],
   },
@@ -527,7 +532,7 @@ const steps: Steps[] = [
       },
       {
         title: 'app luncher and menu',
-        apps: ['demnu'],
+        apps: ['dmenu'],
       },
       {
         title: 'hot key daemon',
@@ -1086,7 +1091,7 @@ const main = async () => {
         }
       }
 
-      if(args.dryRun.value){
+      if (args.dryRun.value) {
         config.dryRun = true;
       }
 
