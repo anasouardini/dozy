@@ -990,7 +990,7 @@ function handleShortArgs(args: string) {
 }
 
 function handleFullArgs(args: string) {
-  console.log(args)
+  // console.log(args)
   if (args.includes(':')) {
     const [key, value] = args.split(':');
     // todo: parse value types
@@ -1078,12 +1078,16 @@ const main = async () => {
       print.info('WIP :)');
     },
     run: async () => {
-      if (args.check) { // temporarily disable checking (testing in temporary VM)
+      if (args.check.value) {
         print.info('setting up environment...');
         const env = loadEnv();
         if (!env.allSet) {
           throw Error(`The environment wasn't setup!\n${env}`);
         }
+      }
+
+      if(args.dryRun.value){
+        config.dryRun = true;
       }
 
       await runSteps();
