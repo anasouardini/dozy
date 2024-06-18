@@ -26,7 +26,7 @@ const config = {
     template: 'desktop',
   },
   installCommandPrefix: "sudo pacman -S --noconfirm",
-  installAURCommandPrefix: "sudo pacman -S --noconfirm"
+  installAURCommandPrefix: "sudo yay -S --noconfirm"
 };
 config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
