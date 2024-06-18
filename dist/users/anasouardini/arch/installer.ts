@@ -26,7 +26,7 @@ const config = {
     template: 'desktop',
   },
   installCommandPrefix: "sudo pacman -S --noconfirm",
-  installAURCommandPrefix: "sudo yay -S --noconfirm"
+  installAURCommandPrefix: "yay -S --noconfirm"
 };
 config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
@@ -247,8 +247,10 @@ const steps: Steps[] = [
         title: 'updating',
         apps: ['base-devel', 'git'],
         cmd: [
+          'rm -rf ./yay-bin',
           'git clone https://aur.archlinux.org/yay-bin.git',
-          'cd yay-bin && makepkg -si --noconfirm'
+          'cd yay-bin && makepkg -si --noconfirm',
+          'rm -rf ./yay-bin',
         ]
       },
     ],
