@@ -288,7 +288,7 @@ const steps: Steps[] = [
         apps: [
           'bluez',
           'bluez-tools',
-          'pulseaudio-module-bluetooth',
+          'pulseaudio-bluetooth',
           'pipewire',
           'pipewire-pulse',
         ],
@@ -312,10 +312,10 @@ const steps: Steps[] = [
       {
         enabled: false,
         apps: [
-          'netplan.io',
+          'netplan',
           // "dsniff",
           'proftpd',
-          'hping3',
+          'hping',
           // "speedtest-cli",
           // "macchanger", // can't install unattendenly
         ],
@@ -328,7 +328,7 @@ const steps: Steps[] = [
     title: 'tools for building source files',
     substeps: [
       {
-        apps: ['build-essential', 'libx11-dev', 'gcc', 'make', 'cmake'],
+        apps: ['base-devel', 'libx11', 'gcc', 'make', 'cmake'],
       },
     ],
   },
@@ -414,7 +414,7 @@ const steps: Steps[] = [
     title: 'better alternatives',
     substeps: [
       {
-        apps: ['ripgrep', 'btop', 'fd-find', 'ncdu', 'bat', 'tldr'],
+        apps: ['ripgrep', 'btop', 'fd', 'ncdu', 'bat', 'tldr'],
       },
     ],
   },
@@ -433,7 +433,7 @@ const steps: Steps[] = [
     substeps: [
       {
         title: 'partitioning, resizing, etc',
-        apps: ['dosfstools', 'gdisk', 'lvm2', 'smartmontools'],
+        apps: ['dosfstools', 'sgdisk', 'lvm2', 'smartmontools'],
       },
       {
         enabled: false,
@@ -448,7 +448,7 @@ const steps: Steps[] = [
     title: 'android tools',
     substeps: [
       {
-        apps: ['adb', 'fastboot'],
+        apps: ['adb', 'android-tools'],
       },
     ],
   },
@@ -459,28 +459,11 @@ const steps: Steps[] = [
     substeps: [
       {
         title: 'Docker',
-        apps: ['docker.io', 'docker-compose'],
+        apps: ['docker', 'docker-compose'],
       },
       {
-        title: 'qemu shared dependencies',
-        apps: ['qemu-system', 'libvirt-daemon-system'],
-      },
-      {
-        enabled: false, // enable when using CLI-only
-        title: 'qemu CLI dependencies - enable if you disable GUI client',
-        apps: ['libvirt-clients', 'qemu-utils', 'ovmf'],
-      },
-      {
-        title: 'CLI client',
-        apps: ['virtinst'],
-      },
-      {
-        title: 'GUI client',
-        apps: ['virt-manager'],
-      },
-      {
-        title: 'qemu viewer',
-        apps: ['virt-viewer'],
+        title: 'qemu packages',
+        apps: ['qemu-system', 'qemu-full', 'virt-manager'],
       },
       {
         title: 'adding user to libvirt groups',
@@ -505,13 +488,14 @@ const steps: Steps[] = [
         apps: ['tor', 'proxychains'],
       },
       {
-        apps: ['pass', 'pinentry-qt'],
+        apps: ['pass', 'pinentry'],
         // TODO: make this more generic: get gpg key id by email
         cmd: ['pass init 29E7111E31B67AD036E371BC2DC6D6ACC9718E3E'],
       },
       {
         title: 'a password prompt for privs escalation (for GUI apps)',
-        apps: ['policykit-1-gnome'],
+        apps: ['lxqt-policykit'],
+        cmd: ['sudo echo "pintentry-program /usr/bin/lxqt-policykit-agent" > ~/.gnupg/gpg-agent.conf'],
       },
     ],
   },
@@ -520,7 +504,7 @@ const steps: Steps[] = [
     title: 'notifications',
     substeps: [
       {
-        apps: ['dbus-x11', 'notification-daemon', 'libnotify-bin', 'dunst'],
+        apps: ['dbus-x11', 'notification-daemon', 'libnotify', 'dunst'],
       },
     ],
   },
@@ -543,7 +527,7 @@ const steps: Steps[] = [
       },
       {
         title: 'app luncher and menu',
-        apps: ['suckless-tools' /*'rofi'*/],
+        apps: ['demnu'],
       },
       {
         title: 'hot key daemon',
@@ -588,7 +572,7 @@ const steps: Steps[] = [
     title: 'browsers',
     substeps: [
       {
-        apps: ['chromium', 'brave-browser', 'google-chrome-stable'],
+        apps: ['chromium', 'brave', 'google-chrome'],
       },
     ],
   },
@@ -682,7 +666,7 @@ const steps: Steps[] = [
         ],
       },
       {
-        apps: ['plexmediaserver'],
+        apps: ['plex-media-server'],
       },
     ],
   },
@@ -732,17 +716,6 @@ const steps: Steps[] = [
     ],
   },
   {
-    title: 'remove useless dirs',
-    category: 'common',
-    substeps: [
-      {
-        cmd: [
-          `cd $HOME && sudo rm -rf Public Videos Templates Pictures Music Documents Desktop`,
-        ],
-      },
-    ],
-  },
-  {
     title: 'set time zone',
     category: 'common',
     substeps: [
@@ -756,13 +729,14 @@ const steps: Steps[] = [
     category: 'desktop',
     substeps: [
       {
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/* $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.config $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.vscode $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.gnupg $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.password-store $HOME/;`,
+        cmd: [ 
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME;`, // we don't need this in a temporary VM
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home/scripts $HOME/home/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.config $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.vscode $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.gnupg $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.password-store $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.ssh $HOME/`,
         ],
       },
     ],
@@ -891,29 +865,30 @@ async function runSteps() {
             }
           }
         }
-        continue;
       }
 
-      const cmdList = substep.cmd;
-      if (!config.dryRun && Array.isArray(cmdList)) {
-        for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
-          const cmd = cmdList[cmdIndex];
+      if (substep.cmd) {
+        const cmdList = substep.cmd;
+        if (!config.dryRun && Array.isArray(cmdList)) {
+          for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
+            const cmd = cmdList[cmdIndex];
 
-          try {
-            print.title(
-              `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
-                0,
-                21,
-              )}..."`,
-            );
-            command(cmd);
-          } catch (err) {
-            log({
-              orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
-                }.${substepsList.length}.${cmdList.length}`,
-              title: `running ${cmd}`,
-              msg: `${err}`,
-            });
+            try {
+              print.title(
+                `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
+                  0,
+                  21,
+                )}..."`,
+              );
+              command(cmd);
+            } catch (err) {
+              log({
+                orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
+                  }.${substepsList.length}.${cmdList.length}`,
+                title: `running ${cmd}`,
+                msg: `${err}`,
+              });
+            }
           }
         }
       }
@@ -1068,7 +1043,7 @@ const main = async () => {
       print.info('WIP :)');
     },
     run: async () => {
-      if (args.check) {
+      if (args.check && false) { // temporarily disable checking (testing in temporary VM)
         print.info('setting up environment...');
         const env = loadEnv();
         if (!env.allSet) {
