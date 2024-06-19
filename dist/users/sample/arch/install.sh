@@ -5,8 +5,7 @@ bootType="bios"; # uefi/bios
 if [[ -d /sys/firmware/efi ]];then
     bootType="uefi"; # uefi/bios
 else
-    bootType="bios"; # uefi/bios
-fi
+
 username="venego";
 initialPassword="venego";
 hostname="i5";
