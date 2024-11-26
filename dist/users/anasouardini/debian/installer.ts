@@ -9,6 +9,8 @@ const process = Deno;
 const config = {
   bkp: {
     drive: { serial: 'ZA465ASK', mountPath: '/media/D' },
+    // directory: 'bkp/bkpos',
+    directory: 'bkp/homeSetup',
     repo: {
       webUrl: 'https://github.com/anasouardini/dotfiles.git',
       sshUrl: 'git@github.com:anasouardini/dotfiles.git',
@@ -248,21 +250,22 @@ const steps: Steps[] = [
     ],
   },
   {
+    enabled: false,
     category: 'common',
     title: 'restore config',
     substeps: [
       {
         title: 'restore apt config',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/apt /etc/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
         ],
       },
       {
         title: 'restore keyrings for apt',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/usr/share/keyrings /usr/share/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
           `mkdir -p $HOME/.local/share;`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.local/share/keyrings $HOME/.local/share/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.local/share/keyrings $HOME/.local/share/`,
         ],
       },
       {
@@ -272,13 +275,14 @@ const steps: Steps[] = [
     ],
   },
   {
+    enabled: false,
     category: 'common',
     title: 'mouse/kb setup',
     substeps: [
       {
         title: 'copy mouse/keyboard config over',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/X11/xorg.conf.d /etc/X11/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
         ],
       },
     ],
@@ -582,7 +586,7 @@ const steps: Steps[] = [
           make && sudo make install; \\
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
           sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/etc/keyd/default.conf /etc/keyd/;
+          sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
           `,
         ],
       },
@@ -651,9 +655,9 @@ const steps: Steps[] = [
     title: 'databases',
     substeps: [
       {
-        enabled: false,
+        enabled: true,
         title: 'installing MySQL',
-        apps: ['myql'],
+        apps: ['myql-server'],
       },
       {
         title: 'installing sqlite3',
@@ -746,12 +750,11 @@ const steps: Steps[] = [
     ],
   },
   {
-    enabled: false,
     category: 'desktop',
     title: 'installing node packages',
     substeps: [
       {
-        cmd: ['pnpm i -g nodemon pm2 prettier typescript'],
+        cmd: ['pnpm i -g nodemon pm2 prettier typescript clockify'],
       },
     ],
   },
@@ -761,7 +764,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `cd $HOME && sudo rm -rf Public Videos Templates Pictures Music Documents Desktop`,
+          `cd $HOME && sudo rm -rf Public Videos Templates Pictures Music Documents`,
         ],
       },
     ],
@@ -776,29 +779,31 @@ const steps: Steps[] = [
     ],
   },
   {
+    enabled: false,
     title: 'syncing/restore files from bkp drive',
     category: 'desktop',
     substeps: [
       {
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/* $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/home $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.config $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.vscode $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.gnupg $HOME/;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.password-store $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/* $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/home $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.config $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.vscode $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.gnupg $HOME/;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.password-store $HOME/;`,
         ],
       },
     ],
   },
   {
+    enabled: false,
     category: 'common',
     title: 'setting up dotfiles',
     substeps: [
       {
         title: 'restore ssh keys',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/bkp/bkpos/home/$USER/.ssh $HOME/`,
+          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.ssh $HOME/`,
         ],
       },
       {
