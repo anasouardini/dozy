@@ -538,6 +538,17 @@ const steps: Steps[] = [
         apps: ['dmenu'],
       },
       {
+        title: 'albert app luncher',
+        cmd: [
+          `
+            echo 'deb http://download.opensuse.org/repositories/home:/manuelschneid3r/Raspbian_9.0/ /' | sudo tee /etc/apt/sources.list.d/home:manuelschneid3r.list
+            curl -fsSL https://download.opensuse.org/repositories/home:manuelschneid3r/Raspbian_9.0/Release.key | gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_manuelschneid3r.gpg > /dev/null
+            sudo apt update
+            sudo apt install albert
+          `
+        ]
+      },
+      {
         title: 'hot key daemon',
         apps: ['sxhkd'],
       },
@@ -580,7 +591,7 @@ const steps: Steps[] = [
     title: 'browsers',
     substeps: [
       {
-        apps: ['chromium', 'brave', 'google-chrome'],
+        apps: ['chromium', 'aur:brave', 'aur:google-chrome'],
       },
     ],
   },
@@ -863,9 +874,9 @@ async function runSteps() {
           print.title(`${appIndex + 1} / ${appsList.length} - [app] ${app}`);
           if (!config.dryRun) {
             try {
-              if(app.includes('aur.')){
+              if (app.includes('aur.')) {
                 command(`${config.installAURCommandPrefix} ${app.split('aur.')[1]}`);
-              }else{
+              } else {
                 command(`${config.installCommandPrefix} ${app}`);
               }
             } catch (err) {
