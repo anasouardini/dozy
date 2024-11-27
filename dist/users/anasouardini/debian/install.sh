@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ ! $USER == "root" ]; then
+  echo "You need to be root to run this script.";
+  exit 2;
+fi
+
 os="debian";
 osVersion=$(cat /proc/version);
 if [[ osVersion == *"arch"* ]];then

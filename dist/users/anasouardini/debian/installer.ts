@@ -6,9 +6,46 @@ const process = Deno;
 // ------------------------------ CONFIGURATION -----------------------
 // --------------------------------------------------------------------
 
-const config = {
+interface Drive {
+  serial: string;
+  mountPath: string;
+}
+interface Config {
+  username: string;
   bkp: {
-    drive: { serial: 'ZA465ASK', mountPath: '/media/D' },
+    drives: Record<'D' | 'D2', Drive>;
+    directory: string;
+    repo: {
+      webUrl: string;
+      sshUrl: string;
+      localURI: string;
+    };
+    dotfiles: {
+      path: string;
+    };
+  };
+  dryRun: boolean;
+  path: {
+    log: string;
+  };
+  defaults: {
+    template: 'desktop' | 'homeServer';
+    modes: {
+      desktop: {
+        externalHome: boolean;
+      },
+      homeServer: {};
+    }
+  };
+  installCommandPrefix: string;
+}
+const config: Config = {
+  username: 'venego',
+  bkp: {
+    drives: {
+      D: { serial: 'ZA465ASK', mountPath: '/media/D' },
+      D2: { serial: '23SBW0CAT', mountPath: '/media/D2' }
+    },
     // directory: 'bkp/bkpos',
     directory: 'bkp/homeSetup',
     repo: {
@@ -26,10 +63,18 @@ const config = {
   },
   defaults: {
     template: 'desktop',
+    modes: {
+      desktop: {
+        externalHome: true,
+      },
+      homeServer: {
+        externalHome: true,
+      },
+    }
   },
   installCommandPrefix: "sudo apt install -y"
 };
-config.bkp.repo.localURI = `${config.bkp.drive.mountPath}/bkp/bkpRepos/.dotfiles.git`;
+config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
 // --------------------------------------------------------------------
 // ---------------------------- UTILITIES -----------------------------
@@ -135,9 +180,9 @@ const checkEnv = () => {
   try {
     command(`
       BKP_DRIVE_ATTACHED=$(lsblk -o name,serial \\
-      | grep "${config.bkp.drive.serial}" \\
-      | awk '{print $2}'); \\
-      if [[ ! $BKP_DRIVE_ATTACHED == "${config.bkp.drive.serial}" ]]; then \\
+      | grep "${config.bkp.drives.D.serial}" \\
+      | awk '{print $2}'; \\
+      if [[ ! $BKP_DRIVE_ATTACHED == "${config.bkp.drives.D.serial}" ]];then \\
         echo "err" >&2; \\
       fi
     `);
@@ -149,12 +194,12 @@ const checkEnv = () => {
     command(`
       OUTPUT=$(lsblk -o mountpoints,name,serial); \\
       DRIVE_NAME=$(printf "$OUTPUT" \\
-        | grep "${config.bkp.drive.serial}" \\
+        | grep "${config.bkp.drives.D.serial}" \\
         | awk '{print $1}'); \\
       BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
         | grep "└─"$DRIVE_NAME \\
         | awk '{print $1}'); \\
-      if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drive.mountPath}" ]]; then \\
+      if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
         echo "err" >&2; \\
       fi
     `);
@@ -187,13 +232,13 @@ const loadEnv = () => {
         command(`
           OUTPUT=$(lsblk -o mountpoints,name,serial); \\
           DRIVE_NAME=$(printf "$OUTPUT" \\
-            | grep "${config.bkp.drive.serial}" \\
+            | grep "${config.bkp.drives.D.serial}" \\
             | awk '{print $1}'); \\
           BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
             | grep "└─"$DRIVE_NAME \\
             | awk '{print $1}'); \\
-          if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drive.mountPath}" ]]; then \\
-            sudo mount "/dev/"$DRIVE_NAME"1" "${config.bkp.drive.mountPath}"; \\
+          if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
+            sudo mount "/dev/"$DRIVE_NAME"1" "${config.bkp.drives.D.mountPath}"; \\
           fi; \\
           if [[ ! $? == 0 ]]; then \\
             echo "err" >&2; \\
@@ -250,22 +295,21 @@ const steps: Steps[] = [
     ],
   },
   {
-    enabled: false,
     category: 'common',
     title: 'restore config',
     substeps: [
       {
         title: 'restore apt config',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
         ],
       },
       {
         title: 'restore keyrings for apt',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
-          `mkdir -p $HOME/.local/share;`,
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.local/share/keyrings $HOME/.local/share/`,
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
+          // `mkdir -p $HOME/.local/share;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$config.username/.local/share/keyrings $HOME/.local/share/`,
         ],
       },
       {
@@ -275,14 +319,13 @@ const steps: Steps[] = [
     ],
   },
   {
-    enabled: false,
     category: 'common',
     title: 'mouse/kb setup',
     substeps: [
       {
         title: 'copy mouse/keyboard config over',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
         ],
       },
     ],
@@ -586,7 +629,7 @@ const steps: Steps[] = [
           make && sudo make install; \\
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
           sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
           `,
         ],
       },
@@ -723,7 +766,7 @@ const steps: Steps[] = [
       },
       {
         cmd: [
-          'sudo chsh -s /bin/zsh $USER',
+          `chsh -s /bin/zsh ${config.username}`,
           'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
         ],
       },
@@ -785,7 +828,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/* $HOME/;`,
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/$USER/* $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/home $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.config $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.vscode $HOME/;`,
@@ -803,7 +846,7 @@ const steps: Steps[] = [
       {
         title: 'restore ssh keys',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.ssh $HOME/`,
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/$USER/.ssh $HOME/`,
         ],
       },
       {
@@ -838,11 +881,13 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;'
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
+          'apt install sudo -y',
+          'chmod -aG sudo venego'
         ],
       },
     ],
-  }
+  },
 ];
 // todo: install lazygit
 
@@ -1108,6 +1153,15 @@ function parseArgs() {
 const main = async () => {
   const args = parseArgs();
 
+  if (args.check) {
+    print.info('setting up environment...');
+    const env = loadEnv();
+    console.log(env)
+    if (!env.allSet) {
+      throw Error(`The environment wasn't setup!\n${env}`);
+    }
+  }
+
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     // list steps
     list: () => {
@@ -1130,13 +1184,8 @@ const main = async () => {
       print.info('WIP :)');
     },
     run: async () => {
-      if (args.check) {
-        print.info('setting up environment...');
-        const env = loadEnv();
-        if (!env.allSet) {
-          throw Error(`The environment wasn't setup!\n${env}`);
-        }
-      }
+      if (args.check && !loadEnv().allSet) { return; }
+      if (!args.run) { return; }
 
       await runSteps();
     },
@@ -1161,6 +1210,10 @@ await main();
 
 // feat
 // TODO: specify whether a step is a dependency for another; don't run the step which its depenency was not successful.
+
+// FIX
+// TODO: /etc/apt, /etc/X11/xorg.conf and /etc/usr/sahre/keyrings are not copied  before installing apps
+// TODO: the install.sh script is not working correctly
 
 // UX
 // TODO: add undo function for each step.
