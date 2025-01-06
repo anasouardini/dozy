@@ -46,8 +46,8 @@ const config: Config = {
       D: { serial: 'ZA465ASK', mountPath: '/media/D' },
       D2: { serial: '23SBW0CAT', mountPath: '/media/D2' }
     },
-    // directory: 'bkp/bkpos',
-    directory: 'bkp/homeSetup',
+    directory: 'bkp/bkpos',
+    // directory: 'bkp/homeSetup',
     repo: {
       webUrl: 'https://github.com/anasouardini/dotfiles.git',
       sshUrl: 'git@github.com:anasouardini/dotfiles.git',
@@ -288,7 +288,7 @@ const steps: Steps[] = [
     substeps: [
       {
         title: 'updating and upgrading',
-        cmd: ['sudo apt update -y'],
+        cmd: ['sudo apt-get update -y'],
       },
     ],
   },
@@ -321,7 +321,7 @@ const steps: Steps[] = [
       },
       {
         title: 'updating repositories',
-        cmd: ['sudo apt update -y;'],
+        cmd: ['sudo apt-get update -y;'],
       },
     ],
   },
@@ -795,7 +795,7 @@ const steps: Steps[] = [
       },
       {
         cmd: [
-          `chsh -s /bin/zsh ${config.username}`,
+          `sudo chsh -s /bin/zsh $USER`,
           'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
         ],
       },
@@ -855,6 +855,7 @@ const steps: Steps[] = [
     ],
   },
   {
+    // I mount the home straight from another drive now, no need for this
     enabled: false,
     title: 'syncing/restore files from bkp drive',
     category: 'desktop',
@@ -916,8 +917,9 @@ const steps: Steps[] = [
       {
         cmd: [
           'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
-          'sudo apt-get install sudo -y',
-	  // don't set "root" password on installation so you don't need this step
+
+	  // don't set "root" password on installation so you don't need these
+          // 'sudo apt-get install sudo -y',
           // 'sudo usemod -aG sudo venego'
         ],
       },
