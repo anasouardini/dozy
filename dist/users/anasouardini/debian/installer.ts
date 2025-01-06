@@ -72,7 +72,7 @@ const config: Config = {
       },
     }
   },
-  installCommandPrefix: "sudo apt install -y"
+  installCommandPrefix: "sudo apt-get install -y"
 };
 config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 
@@ -181,7 +181,7 @@ const checkEnv = () => {
     command(`
       BKP_DRIVE_ATTACHED=$(lsblk -o name,serial \\
       | grep "${config.bkp.drives.D.serial}" \\
-      | awk '{print $2}'; \\
+      | awk '{print $2}'); \\
       if [[ ! $BKP_DRIVE_ATTACHED == "${config.bkp.drives.D.serial}" ]];then \\
         echo "err" >&2; \\
       fi
@@ -194,14 +194,20 @@ const checkEnv = () => {
     command(`
       OUTPUT=$(lsblk -o mountpoints,name,serial); \\
       DRIVE_NAME=$(printf "$OUTPUT" \\
-        | grep "${config.bkp.drives.D.serial}" \\
-        | awk '{print $1}'); \\
-      BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
-        | grep "└─"$DRIVE_NAME \\
-        | awk '{print $1}'); \\
-      if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
+         | grep "${config.bkp.drives.D.serial}" \\
+         | awk '{print $1}'); \\
+      # BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
+      #  | grep "└─"$DRIVE_NAME \\
+      #  | awk '{print $1}'); \\
+        BKP_DRIVE_MOUNT=$(mount \\
+         | grep $DRIVE_NAME \\
+         | grep "${config.bkp.drives.D.mountPath}");
+      if [[ -z $BKP_DRIVE_MOUNT ]]; then \\
         echo "err" >&2; \\
       fi
+    # if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
+    #   echo "err" >&2; \\
+    # fi
     `);
   } catch (err) {
     envVars.driveMounted = false;
@@ -220,6 +226,7 @@ const checkEnv = () => {
 
   return {
     allSet: Object.values(envVars).every((val) => val == true),
+    // allSet: true,
     env: envVars,
   };
 };
@@ -332,10 +339,15 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
-    title: 'Wrapper for apt, a better way of installing packages.',
+    title: 'package managers',
     substeps: [
       {
-        apps: ['nala'],
+        apps: ['nala', 'flatpak'],
+      },
+      {
+        cmd: [
+           'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
+	],
       },
     ],
   },
@@ -460,10 +472,16 @@ const steps: Steps[] = [
           'mpc',
           'sxiv',
           'gimp',
+          // "xloadimage", // used for setting BG image
+          "xsetbg", // used for setting BG image
           // "imagemagick",
-          // "xloadimage",
           // "feh",
         ],
+        cmd: [
+          'sudo apt-get install flatpak -y',
+          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
+          'flatpak install flathub org.nickvision.tubeconverter'
+        ]
       },
       {
         enabled: false,
@@ -473,7 +491,7 @@ const steps: Steps[] = [
           wget -O droidcam_latest.zip https://files.dev47apps.net/linux/droidcam_2.0.0.zip \\
           unzip droidcam_latest.zip \\
           sudo ./install-client \\
-          sudo apt install linux-headers-\`uname -r\` gcc make \\
+          sudo apt-get install linux-headers-\`uname -r\` gcc make \\
           sudo ./install-video`,
         ],
       },
@@ -624,7 +642,7 @@ const steps: Steps[] = [
         cmd: [
           `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
           git clone https://github.com/rvaiya/keyd; \\
-          sudo apt install gcc make -y; \\
+          sudo apt-get install gcc make -y; \\
           cd keyd; \\
           make && sudo make install; \\
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
@@ -640,7 +658,19 @@ const steps: Steps[] = [
     title: 'file management',
     substeps: [
       {
+	enabled: false,
+	title: "ranger",
         apps: ['ranger'],
+      },
+      {
+	title: "yazi",
+	cmd: [
+	  ``,
+          `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`,
+          `source $HOME/.cargo/env`,
+	  'rustup update',
+	  'cargo install --locked yazi-fm yazi-cli'
+	]
       },
     ],
   },
@@ -681,7 +711,7 @@ const steps: Steps[] = [
         cmd: [
           'mkdir -p $HOME/Downloads;',
           'wget -O $HOME/Downloads/libssl.deb http://snapshot.debian.org/archive/debian/20110406T213352Z/pool/main/o/openssl098/libssl0.9.8_0.9.8o-7_i386.deb',
-          'sudo apt install $HOME/Downloads/libssl.deb -y',
+          'sudo apt-get install $HOME/Downloads/libssl.deb -y',
           'rm $HOME/Downloads/libssl.deb',
           'sudo wget -O /usr/src/utorrent.tar.gz http://download.utorrent.com/linux/utorrent-server-3.0-25053.tar.gz',
 
@@ -713,9 +743,8 @@ const steps: Steps[] = [
     title: 'editors',
     substeps: [
       {
-        title: 'installing lazyvim from repo',
+        title: 'installing lazyvim (nvim distro) from repo',
         enabled: false,
-        apps: ['lazyvim (nvm)'],
         cmd: [
           'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
           'rm -rf $HOME/.config/nvim/.git',
@@ -785,6 +814,8 @@ const steps: Steps[] = [
             [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"; \\
             nvm i node; \\
             nvm i 21; \\
+            sudo npm i -g corepack; \\
+            sudo npm i -g pnpm; \\
             corepack enable; \\
             pnpm i -g pnpm;
           `,
@@ -797,11 +828,13 @@ const steps: Steps[] = [
     title: 'installing node packages',
     substeps: [
       {
-        cmd: ['pnpm i -g nodemon pm2 prettier typescript clockify'],
+        cmd: ['pnpm i -g prettier typescript tsx clockify'],
       },
     ],
   },
   {
+    // disabled: I always mount another home directory from another drive
+    enabled: false,
     title: 'remove useless dirs',
     category: 'common',
     substeps: [
@@ -839,6 +872,7 @@ const steps: Steps[] = [
     ],
   },
   {
+    // I don't use git for this anymore
     enabled: false,
     category: 'common',
     title: 'setting up dotfiles',
@@ -882,19 +916,37 @@ const steps: Steps[] = [
       {
         cmd: [
           'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
-          'apt install sudo -y',
-          'chmod -aG sudo venego'
+          'sudo apt-get install sudo -y',
+	  // don't set "root" password on installation so you don't need this step
+          // 'sudo usemod -aG sudo venego'
         ],
       },
     ],
   },
+  {
+    category: 'common',
+    title: 'setup swap file',
+    substeps: [
+      {
+        cmd: [
+          'sudo swapoff -a',
+          'sudo touch /swapfile',
+          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=16000',
+          'sudo chmod 600 /swapfile',
+          'sudo mkswap /swapfile',
+          'sudo swapon /swapfile',
+          'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
+          'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
+        ],
+      },
+    ],
+  }
 ];
-// todo: install lazygit
 
 const manualSteps = [
   're-login for the default shell to be set',
-  'add core2 (home server) to /etc/hosts',
-  'edit grub (reduce tiemout)',
+//  'add core2 (home server) to /etc/hosts',
+//  'edit grub (reduce tiemout)',
 ];
 
 // --------------------------------------------------------------------
