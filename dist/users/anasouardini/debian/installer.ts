@@ -294,6 +294,15 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'installing standard utils',
+    substeps: [
+      {
+        cmd: ['sudo tasksel install standard'],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'installing apt config dependencies',
     substeps: [
       {
