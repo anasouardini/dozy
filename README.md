@@ -5,7 +5,7 @@ My collections of Linux automation scripts, I'd appreaciate it if you share your
 ### usage
 
 ```bash
-sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh")
+bash <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh")
 ```
 
 That will only run a sample script for a quick demo:
@@ -19,13 +19,13 @@ feel free to add your own directory with installation script(s) to this reposito
 You can, as well, pass any arguments to your script
 
 ```bash
-sh <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh") run check-env etc
+bash <(curl -fsSL "https://dozy.netlify.app/users/sample/debian/install.sh") run check-env etc
 ```
 
 ### NixOS installer
 
 ```bash
-sh <(curl -fsSL "https://dozy.netlify.app/users/sample/nixos/install.sh")
+bash <(curl -fsSL "https://dozy.netlify.app/users/sample/nixos/install.sh")
 ```
 
 NixOS makes it harder for the configuration.nix to be versatile, you might need to tweak it a bit.
@@ -33,7 +33,7 @@ NixOS makes it harder for the configuration.nix to be versatile, you might need 
 ### Arch installer
 
 ```bash
-sh <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
+bash <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 ```
 
 
