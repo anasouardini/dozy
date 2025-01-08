@@ -59,7 +59,7 @@ const config: Config = {
   },
   dryRun: false,
   path: {
-    log: 'postInstallation.log',
+    log: `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`,
   },
   defaults: {
     template: 'desktop',
@@ -245,6 +245,7 @@ const loadEnv = () => {
             | grep "└─"$DRIVE_NAME \\
             | awk '{print $1}'); \\
           if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
+            sudo mkdir -p "${config.bkp.drives.D.mountPath}"; \\
             sudo mount "/dev/"$DRIVE_NAME"1" "${config.bkp.drives.D.mountPath}"; \\
           fi; \\
           if [[ ! $? == 0 ]]; then \\
@@ -453,7 +454,7 @@ const steps: Steps[] = [
         cmd: [
           `
             mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
-            LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*'); \\
+            LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\\K[^"]*'); \\
             curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_\${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"; \\
             tar xf lazygit.tar.gz lazygit; \\
             sudo install lazygit /usr/local/bin;
@@ -481,8 +482,7 @@ const steps: Steps[] = [
           'mpc',
           'sxiv',
           'gimp',
-          // "xloadimage", // used for setting BG image
-          "xsetbg", // used for setting BG image
+          "xloadimage", // it has 'xsetbg': used for setting BG image
           // "imagemagick",
           // "feh",
         ],
@@ -675,10 +675,10 @@ const steps: Steps[] = [
 	title: "yazi",
 	cmd: [
 	  ``,
-          `curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh`,
-          `source $HOME/.cargo/env`,
-	  'rustup update',
-	  'cargo install --locked yazi-fm yazi-cli'
+          `bash <(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs) -y`,
+          `source $HOME/.cargo/env; \\
+	  'rustup update; \\
+	  'cargo install --locked yazi-fm yazi-cli;`
 	]
       },
     ],
@@ -737,9 +737,9 @@ const steps: Steps[] = [
     title: 'databases',
     substeps: [
       {
-        enabled: true,
+        enabled: false, // mysql doesn't suuport unattended installation
         title: 'installing MySQL',
-        apps: ['myql-server'],
+        apps: ['mysql-server'],
       },
       {
         title: 'installing sqlite3',
@@ -823,6 +823,7 @@ const steps: Steps[] = [
             [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"; \\
             nvm i node; \\
             nvm i 21; \\
+            sudo apt-get install npm -y; \\
             sudo npm i -g corepack; \\
             sudo npm i -g pnpm; \\
             corepack enable; \\
@@ -936,6 +937,18 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'mount external home on top of existing one',
+    substeps: [
+      {
+        enabled: false,
+        cmd: [
+          `# get target drive label \\
+           # use the label to get UUID using blkid /dev/[target label]`
+        ],
+      },
+    ],
+  {
+    category: 'common',
     title: 'setup swap file',
     substeps: [
       {
@@ -948,6 +961,7 @@ const steps: Steps[] = [
           'sudo swapon /swapfile',
           'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
           'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
+          'sudo findmnt --verify --verbose',
         ],
       },
     ],
