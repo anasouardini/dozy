@@ -520,7 +520,9 @@ const steps: Steps[] = [
     title: 'basic tools',
     substeps: [
       {
-        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'],
+        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'
+		'pkexec', // balena etcher needs this
+	],
       },
     ],
   },
