@@ -51,6 +51,7 @@ bash <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 │   │   ├── user_configuration.json
 │   │   └── user_credentials.json
 │   ├── debian
+│   │   ├── bootstraper.sh
 │   │   ├── ideas.md
 │   │   ├── installer.ts
 │   │   └── install.sh
