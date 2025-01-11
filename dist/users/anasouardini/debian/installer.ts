@@ -477,14 +477,15 @@ const steps: Steps[] = [
           'zathura-pdf-poppler',
           // "obs-studio",
           // "cheese",
+          'mpv',
           'mpd',
           'ncmpcpp',
           'mpc',
           'sxiv',
           'gimp',
-          "xloadimage", // it has 'xsetbg': used for setting BG image
+          // "xloadimage", // it has 'xsetbg': used for setting BG image
           // "imagemagick",
-          // "feh",
+          "feh",
         ],
         cmd: [
           'sudo apt-get install flatpak -y',
@@ -520,7 +521,7 @@ const steps: Steps[] = [
     title: 'basic tools',
     substeps: [
       {
-        apps: ['rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'
+        apps: ['timeshift', 'rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'
 		'pkexec', // balena etcher needs this
 	],
       },
@@ -679,8 +680,8 @@ const steps: Steps[] = [
 	  ``,
           `bash <(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs) -y`,
           `source $HOME/.cargo/env; \\
-	  'rustup update; \\
-	  'cargo install --locked yazi-fm yazi-cli;`
+	  rustup update; \\
+	  cargo install --locked yazi-fm yazi-cli;`
 	]
       },
     ],
