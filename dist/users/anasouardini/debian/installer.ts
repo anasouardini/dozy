@@ -635,15 +635,19 @@ const steps: Steps[] = [
   },
   {
     category: 'desktop',
-    title: 'desktop GUI',
+    title: 'desktop user interface',
     substeps: [
       {
-        title: 'wm and status bar',
+        title: 'wm and status bar - X11',
         apps: ['i3', 'polybar'],
       },
       {
+        title: 'wm and status bar - wayland',
+        apps: ['sway', 'swaync', 'waybar'],
+      },
+      {
         title: 'app luncher and menu',
-        apps: ['suckless-tools' /*'rofi'*/],
+        apps: ['suckless-tools', /*'rofi'*/],
       },
       {
         title: 'hot key daemon',
