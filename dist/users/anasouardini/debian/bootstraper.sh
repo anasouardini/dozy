@@ -96,6 +96,7 @@ function install(){
   debootstrap --cache-dir="$cachePath" --arch="$arch" "$distribution" "$mountPath" "$mirror"
 
   printGreen "Setting up bindings"
+  mountPath="/mnt/debootstrap-target"
   mount --make-rslave --rbind /dev $mountPath/dev
   mount --make-rslave --rbind /proc $mountPath/proc
   mount --make-rslave --rbind /sys $mountPath/sys
@@ -114,7 +115,7 @@ function install(){
 
   # literally repeating the password twice using echo :)
   printGreen "setting password for root"
-  chroot $mountPath /bin/bash -c "printf "${defaultPassword}\n${defaultPassword}\n" | passwd root"
+  chroot $mountPath /bin/bash -c "printf '${defaultPassword}\n${defaultPassword}\n' | passwd root"
 
   # TODO: make a normal user with 'sudo' group
 
