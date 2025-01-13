@@ -54,7 +54,8 @@ bash <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 │   │   ├── bootstraper.sh
 │   │   ├── ideas.md
 │   │   ├── installer.ts
-│   │   └── install.sh
+│   │   ├── install.sh
+│   │   └── qemu.cfg
 │   └── nixos
 └── sample
     ├── arch
