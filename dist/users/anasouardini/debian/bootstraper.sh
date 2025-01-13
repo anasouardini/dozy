@@ -92,6 +92,14 @@ function install(){
     apt-get install debootstrap -y
   fi
 
+  # Install parted if it's not already installed
+  which parted
+  if [[ $? != 0 ]]; then
+    echo "parted not found. Installing..."
+    apt-get update -y
+    apt-get install parted -y
+  fi
+
   printGreen "debootstraping..."
   debootstrap --cache-dir="$cachePath" --arch="$arch" "$distribution" "$mountPath" "$mirror"
 
@@ -123,10 +131,15 @@ function install(){
   umount -R $mountPath
 }
 
-# function testing(){
-  # printGreen "Booting ${chosenDevice} in Qemu"
-  # qemu-system-x85_64 -machine accel=kvm:tcg -m 512 -hda $chosenDevice
-# }
+function testing(){
+  printGreen "Booting ${chosenDevice} in Qemu"
+  # qemu-system-x86_64 -machine accel=kvm:tcg -m 512 -hda $chosenDevice
+
+  qemu-system-x86_64 -m 500 -enable-kvm -boot order=d -drive file=/mnt/fake-drive -device virtio-blk-device,drive=hd
+
+  ## qemu params
+  # -append "root=/dev/vda"
+}
 
 prepareDesk
 install
