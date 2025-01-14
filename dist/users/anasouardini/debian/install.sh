@@ -34,6 +34,6 @@ if [ -f $installerPath ]; then
   rm -rf $installerPath;
 fi
 
-curl -fsSL "${host}/users/${githubUsername}/debian/installer.ts" -o $installerPath;
+wget -O $installerPath "${host}/users/${githubUsername}/debian/installer.ts";
 echo "running the post-installation script";
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;

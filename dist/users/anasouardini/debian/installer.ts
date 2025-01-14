@@ -59,7 +59,7 @@ const config: Config = {
   },
   dryRun: false,
   path: {
-    log: `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`,
+    log: ``,
   },
   defaults: {
     template: 'desktop',
@@ -75,6 +75,7 @@ const config: Config = {
   installCommandPrefix: "sudo apt-get install -y"
 };
 config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
+config.path.log = `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`;
 
 // --------------------------------------------------------------------
 // ---------------------------- UTILITIES -----------------------------
@@ -295,6 +296,21 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'package managers',
+    substeps: [
+      {
+        apps: ['nala', 'flatpak'],
+      },
+      {
+        cmd: [
+           // this needs password input, leave it within early steps
+           'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
+	],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'installing standard utils',
     substeps: [
       {
@@ -344,20 +360,6 @@ const steps: Steps[] = [
         cmd: [
           `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
         ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'package managers',
-    substeps: [
-      {
-        apps: ['nala', 'flatpak'],
-      },
-      {
-        cmd: [
-           'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
-	],
       },
     ],
   },
@@ -521,7 +523,7 @@ const steps: Steps[] = [
     title: 'basic tools',
     substeps: [
       {
-        apps: ['timeshift', 'rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf'
+        apps: ['timeshift', 'rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf',
 		'pkexec', // balena etcher needs this
 	],
       },
@@ -954,6 +956,7 @@ const steps: Steps[] = [
         ],
       },
     ],
+  },
   {
     category: 'common',
     title: 'setup swap file',
