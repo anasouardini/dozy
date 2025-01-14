@@ -19,8 +19,9 @@ arch="amd64"
 partTableType="msdos"
 cachePath="/home/venego/.debootstrap-cache"
 mkdir -p $cachePath;
-defaultUser="root"
-defaultPassword="root"
+rootPassword="root"
+defaultUsername="venego"
+defaultUserpass="venego"
 
 
 ## only run as 'root'
@@ -123,9 +124,12 @@ function install(){
 
   # literally repeating the password twice using echo :)
   printGreen "setting password for root"
-  chroot $mountPath /bin/bash -c "printf '${defaultPassword}\n${defaultPassword}\n' | passwd root"
+  chroot $mountPath /bin/bash -c "printf '${rootPassword}\n${rootPassword}\n' | passwd root"
 
-  # TODO: make a normal user with 'sudo' group
+  # adding a normal user with 'sudo' group
+  chroot $mountPath /bin/bash -c "apt install sudo -y"
+  chroot $mountPath /bin/bash -c "printf "${defaultUserpass}\n${defaultUserpass}\n\n\n\n\n\n\n" | adduser ${defaultUsername}"
+  chroot $mountPath /bin/bash -c "usermod -aG sudo ${defaultUsername}"
 
   printGreen "Unounting ${chosenDevice}"
   umount -R $mountPath
@@ -133,9 +137,10 @@ function install(){
 
 function testing(){
   printGreen "Booting ${chosenDevice} in Qemu"
-  # qemu-system-x86_64 -machine accel=kvm:tcg -m 512 -hda $chosenDevice
+  apt-get install qemu-system-x86_64 -y
+  qemu-system-x86_64 -machine accel=kvm:tcg -m 1024 -hda $chosenDevice
 
-  qemu-system-x86_64 -m 500 -enable-kvm -boot order=d -drive file=/mnt/fake-drive -device virtio-blk-device,drive=hd
+  # qemu-system-x86_64 -m 500 -enable-kvm -boot order=d -drive file=/mnt/fake-drive -device virtio-blk-device,drive=hd
 
   ## qemu params
   # -append "root=/dev/vda"
