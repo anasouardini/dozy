@@ -140,8 +140,6 @@ function testing(){
   apt-get install qemu-system-x86_64 -y
   qemu-system-x86_64 -machine accel=kvm:tcg -m 1024 -hda $chosenDevice
 
-  # qemu-system-x86_64 -m 500 -enable-kvm -boot order=d -drive file=/mnt/fake-drive -device virtio-blk-device,drive=hd
-
   ## qemu params
   # -append "root=/dev/vda"
 }
