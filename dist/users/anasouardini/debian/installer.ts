@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import util from 'node:util';
 
 const process = Deno;
 
@@ -273,14 +274,18 @@ const loadEnv = () => {
 // ------------------------------------------------------------------
 
 type Steps = {
-  enabled?: boolean;
-  category: 'common' | 'homeServer' | 'desktop' | 'termux';
   title: string;
+  category: 'common' | 'homeServer' | 'desktop' | 'termux';
+  enabled?: boolean;
+  id?: string;
+  dependsOn?: string[];
   substeps: {
-    enabled?: boolean;
     title?: string;
     cmd?: string[];
     apps?: string[];
+    enabled?: boolean;
+    id?: string;
+    dependsOn?: string[];
   }[];
 };
 const steps: Steps[] = [
@@ -297,15 +302,25 @@ const steps: Steps[] = [
   {
     category: 'common',
     title: 'package managers',
+    id: 'package-managers',
     substeps: [
       {
-        apps: ['nala', 'flatpak'],
+        apps: ['nala'],
       },
       {
+        title: "Installing and setting up flatpak",
+        id: 'flatpak',
+        apps: ['flatpak'],
         cmd: [
-           // this needs password input, leave it within early steps
-           'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
-	],
+          // this needs password input, leave it within early steps
+          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
+        ],
+      },
+      {
+        title: "Installing Nix (the package manager)",
+        cmd: [
+          'sh <(curl -L https://nixos.org/nix/install) --daemon'
+        ],
       },
     ],
   },
@@ -489,11 +504,16 @@ const steps: Steps[] = [
           // "imagemagick",
           "feh",
         ],
+      },
+      {
+        title: 'installing media tools from flatpak',
         cmd: [
-          'sudo apt-get install flatpak -y',
-          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
-          'flatpak install flathub org.nickvision.tubeconverter'
-        ]
+          // 'sudo apt-get install flatpak -y',
+          // 'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
+          'timeout 60 flatpak install flathub org.nickvision.tubeconverter',
+          'timeout 60 flatpak install flathub org.localsend.localsend_app',
+        ],
+        dependsOn: ['package-managers.flatpak'],
       },
       {
         enabled: false,
@@ -520,12 +540,22 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
-    title: 'basic tools',
+    title: 'basic misc tools',
     substeps: [
       {
-        apps: ['timeshift', 'rsync', 'bc', 'tree', 'trash-cli', 'rename', 'whois', 'fzf',
-		'pkexec', // balena etcher needs this
-	],
+        apps: [
+          'timeshift',
+          'rsync',
+          'bc',
+          'tree',
+          'trash-cli',
+          'rename',
+          'whois',
+          'fzf',
+          'pkexec', // balena etcher needs this
+          'preload', // for preloading frequently used apps in memory
+          'picom', // for windows transparency
+        ],
       },
     ],
   },
@@ -564,6 +594,10 @@ const steps: Steps[] = [
         apps: ['docker.io', 'docker-compose'],
       },
       {
+        title: 'adding user to docker group',
+        cmd: [`sudo usermod -aG docker $USER`],
+      },
+      {
         title: 'qemu shared dependencies',
         apps: ['qemu-system', 'libvirt-daemon-system'],
       },
@@ -588,10 +622,6 @@ const steps: Steps[] = [
         title: 'adding user to libvirt groups',
         cmd: [`sudo usermod -aG libvirt,libvirt-qemu $USER`],
       },
-      {
-        title: 'adding user to docker group',
-        cmd: [`sudo usermod -aG docker $USER`],
-      },
     ],
   },
   {
@@ -599,8 +629,24 @@ const steps: Steps[] = [
     title: 'security',
     substeps: [
       {
+        apps: ['firejail', 'apparmor'],
+      },
+      {
         enabled: false,
-        apps: ['firejail', 'ufw'],
+        apps: ['fail2ban'],
+        cmd: ['sudo systemctl enable fail2ban --now']
+      },
+      {
+        apps: ['ufw'],
+        cmd: [
+          'sudo ufw limit 22/tcp',
+          'sudo ufw allow 80/tcp',
+          'sudo ufw allow 443/tcp',
+          'sudo ufw default allow outgoing',
+          'sudo ufw default deny incoming',
+          'sudo ufw allow in on tailscale0', // you'll need this for Tailscale
+          'sudo ufw enable',
+        ]
       },
       {
         enabled: false,
@@ -619,15 +665,6 @@ const steps: Steps[] = [
   },
   {
     category: 'desktop',
-    title: 'notifications',
-    substeps: [
-      {
-        apps: ['dbus-x11', 'notification-daemon', 'libnotify-bin', 'dunst'],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
     title: 'audio tools',
     substeps: [
       {
@@ -637,11 +674,19 @@ const steps: Steps[] = [
   },
   {
     category: 'desktop',
-    title: 'desktop user interface',
+    title: 'desktop user interface UI',
     substeps: [
+      {
+        title: 'notifications',
+        apps: ['dbus-x11', 'notification-daemon', 'libnotify-bin', 'dunst'],
+      },
       {
         title: 'wm and status bar - X11',
         apps: ['i3', 'polybar'],
+      },
+      {
+        title: 'clipboard manager',
+        apps: ['diodon'],
       },
       {
         title: 'wm and status bar - wayland',
@@ -669,6 +714,21 @@ const steps: Steps[] = [
           `,
         ],
       },
+      {
+        enabled: false,
+        title: "build pywal from source",
+        apps: ['python3', 'python3-venv', 'python3-pip', 'pidof', 'imagemagick'], // dependencies
+        cmd: [
+          `
+          git clone https://github.com/dylanaraps/pywal \\
+          cd pywal \\
+          python3 -m venv ~/pywal-venv \\
+          source ~/pywal-venv/bin/activate \\
+          pip3 install . \\
+          deactivate
+          `
+        ]
+      },
     ],
   },
   {
@@ -676,19 +736,19 @@ const steps: Steps[] = [
     title: 'file management',
     substeps: [
       {
-	enabled: false,
-	title: "ranger",
+        enabled: false,
+        title: "ranger",
         apps: ['ranger'],
       },
       {
-	title: "yazi",
-	cmd: [
-	  ``,
+        title: "yazi",
+        cmd: [
           `bash <(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs) -y`,
           `source $HOME/.cargo/env; \\
 	  rustup update; \\
-	  cargo install --locked yazi-fm yazi-cli;`
-	]
+	  cargo install --locked yazi-fm yazi-cli;`,
+          `which nix-env && [[ $? ]] && timeout 60 nix-env -iA nixpkgs.ueberzugpp`
+        ]
       },
     ],
   },
@@ -706,7 +766,11 @@ const steps: Steps[] = [
     title: 'browsers',
     substeps: [
       {
-        apps: ['chromium', 'brave-browser', 'google-chrome-stable'],
+        apps: ['brave-browser'],
+      },
+      {
+        enabled: false,
+        apps: ['chromium', 'google-chrome-stable'],
       },
     ],
   },
@@ -761,8 +825,8 @@ const steps: Steps[] = [
     title: 'editors',
     substeps: [
       {
-        title: 'installing lazyvim (nvim distro) from repo',
         enabled: false,
+        title: 'installing lazyvim (nvim distro) from repo',
         cmd: [
           'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
           'rm -rf $HOME/.config/nvim/.git',
@@ -770,9 +834,13 @@ const steps: Steps[] = [
         ],
       },
       {
-        title: 'installing vscode',
+        title: '',
         apps: ['code'],
       },
+      {
+        title: 'installing zed',
+        cmd: ['curl -f https://zed.dev/install.sh | sh']
+      }
     ],
   },
   {
@@ -937,7 +1005,7 @@ const steps: Steps[] = [
         cmd: [
           'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
 
-	  // don't set "root" password on installation so you don't need these
+          // don't set "root" password on installation so you don't need these
           // 'sudo apt-get install sudo -y',
           // 'sudo usemod -aG sudo venego'
         ],
@@ -955,6 +1023,18 @@ const steps: Steps[] = [
            # use the label to get UUID using blkid /dev/[target label]`
         ],
       },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'setting up fstab',
+    substeps: [
+      {
+        cmd: [
+          `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" /media/D ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
+          `echo "/media/D/bkp/homeSetup/home /home	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+        ]
+      }
     ],
   },
   {
@@ -980,16 +1060,50 @@ const steps: Steps[] = [
 
 const manualSteps = [
   're-login for the default shell to be set',
-//  'add core2 (home server) to /etc/hosts',
-//  'edit grub (reduce tiemout)',
+  'sudo apt install mysql-server',
+  'reduce grub timeout to 1 sec',
+  'sudo apt-get install grub-imageboot-y; add rescue iso to /boot/images; sudo update-grub2;',
 ];
 
 // --------------------------------------------------------------------
 // ------------------------- INSTALLATION RUN -------------------------
 // --------------------------------------------------------------------
 
-function validateSteps() {
-  // steps.
+function validateStepsWIP() {
+  const unmetDependencies = {};
+
+  steps.forEach((step, stepIndex) => {
+    if (!step.id) { console.log('skipping a step without an id'); return; }
+
+    // check if it's, itself, a dependency and remove it from the list if it is
+    Object.entries(unmetDependencies).forEach(([dependency, dependant]) => {
+      console.log(`found dependency ${dependency}`);
+      if (dependency.split('.')[0] == step?.id) {
+        if (!dependency.includes('.')) {
+          delete unmetDependencies[dependency];
+        }
+      }
+    })
+
+    // check deps for steps
+    if (step.dependsOn) { }
+
+    step.substeps.forEach((subStep) => {
+
+      // dependency found
+      if (unmetDependencies.some((item) => item.dependency == dependency?.id)) {
+        return;
+      }
+
+      // 
+      unmetDependencies.push({ dependency, dependant: step.id as string });
+    });
+
+    if (unmetDependencies.length) {
+      console.log(unmetDependencies);
+      throw Error(`Unmet Dependencies!`);
+    }
+  })
 }
 
 function listApps() {
@@ -1079,7 +1193,6 @@ async function runSteps() {
             }
           }
         }
-        continue;
       }
 
       if (substep.cmd) {
@@ -1297,6 +1410,7 @@ await main();
 
 // feat
 // TODO: specify whether a step is a dependency for another; don't run the step which its depenency was not successful.
+// this requires lots of non-standard meta-programming for generating hashes of steps, etc
 
 // FIX
 // TODO: /etc/apt, /etc/X11/xorg.conf and /etc/usr/sahre/keyrings are not copied  before installing apps
