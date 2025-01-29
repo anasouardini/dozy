@@ -5,16 +5,18 @@ host="https://dozy.netlify.app";
 githubUsername='anasouardini';
 installerArgs=$@;
 
-function installIfDoesnNotExist(){
-  command -v "$1" > /dev/null 2>&1;
-  if [ ! $? -eq 0 ]; then
-    echo "installing ${1}...";
-    sudo apt install $1 -y
-  fi
+function installIfDoesNotExist(){
+  for package in "$@"; do
+    command -v "$package" > /dev/null 2>&1;
+    if [ ! $? -eq 0 ]; then
+      echo "installing ${package}...";
+      sudo apt install $package -y
+    fi
+  done
 }
-installIfDoesnNotExist curl
-installIfDoesnNotExist wget
-installIfDoesnNotExist unzip # deno needs it
+
+# deno needs unzip
+installIfDoesNotExist curl wget unzip
 
 #-------- install deno
 ls $HOME/.deno/bin/deno > /dev/null 2>&1;
