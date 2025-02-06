@@ -16,6 +16,7 @@ interface Config {
   bkp: {
     drives: Record<'D' | 'D2', Drive>;
     directory: string;
+    installScriptUrl: string;
     repo: {
       webUrl: string;
       sshUrl: string;
@@ -28,9 +29,13 @@ interface Config {
   dryRun: boolean;
   path: {
     log: string;
+    checkpointDaemon: string;
+    checkpointScript: string;
   };
   defaults: {
     template: 'desktop' | 'homeServer';
+    proceedAfterRebootStepID: string,
+    terminal: string,
     modes: {
       desktop: {
         externalHome: boolean;
@@ -48,6 +53,7 @@ const config: Config = {
       D2: { serial: '23SBW0CAT', mountPath: '/media/D2' }
     },
     directory: 'bkp/bkpos',
+    installScriptUrl: 'https://dozy.netlify.app/users/anasouardini/debian/install.sh',
     // directory: 'bkp/homeSetup',
     repo: {
       webUrl: 'https://github.com/anasouardini/dotfiles.git',
@@ -61,9 +67,13 @@ const config: Config = {
   dryRun: false,
   path: {
     log: ``,
+    checkpointDaemon: '',
+    checkpointScript: '',
   },
   defaults: {
     template: 'desktop',
+    proceedAfterRebootStepID: '',
+    terminal: 'alacritty',
     modes: {
       desktop: {
         externalHome: true,
@@ -77,6 +87,8 @@ const config: Config = {
 };
 config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 config.path.log = `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`;
+config.path.checkpointDaemon = `/home/${config.username}/.config/systemd/user/checkpoint.service`;
+config.path.checkpointScript = `/home/${config.username}/.config/systemd/user/checkpoint.sh`;
 
 // --------------------------------------------------------------------
 // ---------------------------- UTILITIES -----------------------------
@@ -290,6 +302,31 @@ type Steps = {
   }[];
 };
 const steps: Steps[] = [
+  // first-essential
+  {
+    title: 'set time zone',
+    category: 'common',
+    substeps: [
+      {
+        cmd: [`sudo timedatectl set-timezone Africa/Casablanca`],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'configuring permissions',
+    substeps: [
+      {
+        cmd: [
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
+
+          // don't set "root" password on installation so you don't need these
+          // 'sudo apt-get install sudo -y',
+          // 'sudo usemod -aG sudo venego'
+        ],
+      },
+    ],
+  },
   {
     category: 'common',
     title: 'Updating sources and packages',
@@ -302,8 +339,275 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'change default shell to zsh and installing zap (package manager)',
+    substeps: [
+      {
+        apps: ['zsh', 'zsh-autosuggestions', 'zsh-syntax-highlighting'],
+      },
+      {
+        cmd: [
+          `sudo chsh -s /bin/zsh $USER`,
+          'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'X11 - only the essential part',
+    substeps: [
+      {
+        apps: ['xorg'],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'password GUI prompt',
+    substeps: [
+      {
+        title: 'a password prompt for privs escalation (for GUI apps)',
+        apps: ['policykit-1-gnome', 'pinentry-qt'],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'audio tools',
+    substeps: [
+      {
+        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'mouse/kb setup',
+    substeps: [
+      {
+        title: 'copy mouse/keyboard config over',
+        cmd: [
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
+        ],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'installing standard utils',
+    substeps: [
+      {
+        cmd: ['sudo tasksel install standard'],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'desktop user interface UI - only the essential parts',
+    substeps: [
+      {
+        title: 'wm and status bar - X11',
+        apps: ['i3', 'polybar'],
+      },
+      {
+        title: 'app luncher and menu',
+        apps: ['suckless-tools', /*'rofi'*/],
+      },
+      {
+        title: 'hot key daemon',
+        apps: ['sxhkd'],
+      },
+      {
+        title: 'installing keyboard key mapper (keyd)',
+        cmd: [
+          `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
+          git clone https://github.com/rvaiya/keyd; \\
+          sudo apt-get install gcc make -y; \\
+          cd keyd; \\
+          make && sudo make install; \\
+          sudo systemctl enable keyd && sudo systemctl start keyd; \\
+          sudo usermod -aG keyd $USER; \\
+          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          `,
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'terminal',
+    substeps: [
+      {
+        apps: [
+          config.defaults.terminal,
+          //  'kitty'
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'browsers',
+    substeps: [
+      {
+        apps: ['brave-browser'],
+      },
+      {
+        // essential setup shouldn't install these
+        // if you need these enabled, move them beyond the 'reboot/checkpoint' step
+        enabled: false,
+        apps: ['chromium', 'google-chrome-stable'],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'setting up fstab',
+    substeps: [
+      {
+        cmd: [
+          `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" ${config.bkp.drives.D.mountPath} ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
+          `echo "${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.bkp.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.bkp.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+        ]
+      }
+    ],
+  },
+  // make checkpoint-daemon and checkpoint-script
+  {
+    title: 'reboot into the 2nd half of installation',
+    category: 'common',
+    id: 'make_checkpoint_for_second_half',
+    substeps: [
+      {
+        cmd: [
+          // mount /home from 2nd drive
+          `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
+
+          // setting up checkpoint daemon
+          `touch ${config.path.checkpointDaemon}`,
+          `echo "[Unit]" | tee -a ${config.path.checkpointDaemon}`,
+          `echo -e "Description=proceed 2nd half of post-installation" | tee -a ${config.path.checkpointDaemon}`,
+          `echo -e "" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "[Install]" | tee -a ${config.path.checkpointDaemon}`,
+          `echo -e "WantedBy=multi-user.target" | tee -a ${config.path.checkpointDaemon}`,
+          `echo -e "" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "[Service]" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "Type=simple" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "Environment=DISPLAY=:0" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "ExecStart=/usr/bin/${config.defaults.terminal} --hold -e zsh -c '${config.path.checkpointScript}; zsh'" | tee -a ${config.path.checkpointDaemon}`,
+          // enabling checkpoint daemon
+          `systemctl --user enable ${config.path.checkpointDaemon}`,
+
+          // setting up checkpoint script
+          `touch ${config.path.checkpointScript}`,
+          `echo "#!/bin/zsh\n" | tee -a ${config.path.checkpointScript}`,
+          `echo "source /home/${config.username}/.zshrc;" | tee -a ${config.path.checkpointScript}`,
+          `echo "bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}" | tee -a ${config.path.checkpointScript}`,
+
+          // reboot to continue the 2nd half wile the OS is useable
+          `sudo reboot now`
+        ]
+      }
+    ]
+  },
+  // this step is ran by checkpoint-script
+  {
+    title: 'picking installation from before rebooting',
+    category: 'common',
+    id: config.defaults.proceedAfterRebootStepID,
+    substeps: [
+      {
+        cmd: [
+          `systemctl --user disable ${config.path.checkpointDaemon}`,
+          `rm -rf ${config.path.checkpointDaemon}`,
+          `rm -rf ${config.path.checkpointScript}`
+        ]
+      }
+    ]
+  },
+  //! TODO: some apps will override your config files (some will backup, some won't)
+  //! TODO: - only solution is to backup your config files before installing those apps and restore them after
+  //! TODO: - so you have to test the apps one-by-one to konw which ones to be careful with
+
+  // SECOND-ESSENTIALS
+  {
+    category: 'common',
+    title: 'installing nvm and node',
+    substeps: [
+      {
+        cmd: [
+          `
+            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash; \\
+            export NVM_DIR="$HOME/.nvm"; \\
+            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; \\
+            [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"; \\
+            nvm i node; \\
+            nvm i 21; \\
+            sudo apt-get install npm -y; \\
+            sudo npm i -g corepack; \\
+            sudo npm i -g pnpm; \\
+            corepack enable; \\
+            pnpm i -g pnpm;
+          `,
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'installing node packages',
+    substeps: [
+      {
+        cmd: ['pnpm i -g prettier typescript tsx clockify'],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'editors',
+    substeps: [
+      {
+        enabled: false,
+        title: 'installing lazyvim (nvim distro) from repo',
+        cmd: [
+          'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
+          'rm -rf $HOME/.config/nvim/.git',
+          'sudo apt update -y',
+        ],
+      },
+      {
+        title: '',
+        apps: ['code'],
+      },
+      // todo: add cursor
+      {
+        enabled: false,
+        title: 'installing zed',
+        cmd: ['curl -f https://zed.dev/install.sh | sh']
+      }
+    ],
+  },
+  {
+    category: 'common',
+    title: 'databases',
+    substeps: [
+      {
+        enabled: false, // mysql doesn't suuport unattended installation
+        title: 'installing MySQL',
+        apps: ['mysql-server'],
+      },
+      {
+        title: 'installing sqlite3',
+        apps: ['sqlite3'],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'package managers',
-    id: 'package-managers',
+    id: 'package_managers',
     substeps: [
       {
         apps: ['nala'],
@@ -322,17 +626,27 @@ const steps: Steps[] = [
         title: "Installing Nix (the package manager)",
         cmd: [
           'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
-	  'sudo mount --bind /media/D/bkp/nix/store /nix/store'
+          'sudo mount --bind /media/D/bkp/nix/store /nix/store'
         ],
       },
     ],
   },
   {
     category: 'common',
-    title: 'installing standard utils',
+    title: 'setup swap file',
     substeps: [
       {
-        cmd: ['sudo tasksel install standard'],
+        cmd: [
+          'sudo swapoff -a',
+          'sudo touch /swapfile',
+          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=8000',
+          'sudo chmod 600 /swapfile',
+          'sudo mkswap /swapfile',
+          'sudo swapon /swapfile',
+          'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
+          'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
+          'sudo findmnt --verify --verbose',
+        ],
       },
     ],
   },
@@ -366,18 +680,6 @@ const steps: Steps[] = [
       {
         title: 'updating repositories',
         cmd: ['sudo apt-get update -y;'],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'mouse/kb setup',
-    substeps: [
-      {
-        title: 'copy mouse/keyboard config over',
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
-        ],
       },
     ],
   },
@@ -548,11 +850,10 @@ const steps: Steps[] = [
     substeps: [
       {
         apps: [
-          'timeshift',
           'rsync',
           'bc',
           'tree',
-          'trash-cli',
+          // 'trash-cli',
           'rename',
           'whois',
           'fzf',
@@ -626,6 +927,9 @@ const steps: Steps[] = [
         title: 'adding user to libvirt groups',
         cmd: [`sudo usermod -aG libvirt,libvirt-qemu $USER`],
       },
+      {
+        apps: ['distrobox'],
+      },
     ],
   },
   {
@@ -633,7 +937,11 @@ const steps: Steps[] = [
     title: 'security',
     substeps: [
       {
-        apps: [/*'firejail',*/ 'apparmor'],
+        enabled: false,
+        apps: ['firejail'],
+      },
+      {
+        apps: ['apparmor'],
       },
       {
         enabled: false,
@@ -664,15 +972,6 @@ const steps: Steps[] = [
       {
         title: 'a password prompt for privs escalation (for GUI apps)',
         apps: ['policykit-1-gnome'],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'audio tools',
-    substeps: [
-      {
-        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
       },
     ],
   },
@@ -749,32 +1048,10 @@ const steps: Steps[] = [
         cmd: [
           `bash <(curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs) -y`,
           `source $HOME/.cargo/env; \\
-	  rustup update; \\
-	  cargo install --locked yazi-fm yazi-cli;`,
+	         rustup update; \\
+	         cargo install --locked yazi-fm yazi-cli;`,
           `which nix-env && [[ $? ]] && timeout 60 nix-env -iA nixpkgs.ueberzugpp`
         ]
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'terminal',
-    substeps: [
-      {
-        apps: ['alacritty'],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'browsers',
-    substeps: [
-      {
-        apps: ['brave-browser'],
-      },
-      {
-        enabled: false,
-        apps: ['chromium', 'google-chrome-stable'],
       },
     ],
   },
@@ -810,44 +1087,6 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: 'common',
-    title: 'databases',
-    substeps: [
-      {
-        enabled: false, // mysql doesn't suuport unattended installation
-        title: 'installing MySQL',
-        apps: ['mysql-server'],
-      },
-      {
-        title: 'installing sqlite3',
-        apps: ['sqlite3'],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'editors',
-    substeps: [
-      {
-        enabled: false,
-        title: 'installing lazyvim (nvim distro) from repo',
-        cmd: [
-          'git clone https://github.com/LazyVim/starter $HOME/.config/nvim',
-          'rm -rf $HOME/.config/nvim/.git',
-          'sudo apt update -y',
-        ],
-      },
-      {
-        title: '',
-        apps: ['code'],
-      },
-      {
-        title: 'installing zed',
-        cmd: ['curl -f https://zed.dev/install.sh | sh']
-      }
-    ],
-  },
-  {
     enabled: false,
     category: 'homeServer',
     title: 'jellyFin server',
@@ -877,53 +1116,6 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: 'common',
-    title: 'change default shell to zsh and installing zap (package manager)',
-    substeps: [
-      {
-        apps: ['zsh', 'zsh-autosuggestions', 'zsh-syntax-highlighting'],
-      },
-      {
-        cmd: [
-          `sudo chsh -s /bin/zsh $USER`,
-          'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
-        ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'installing nvm and node',
-    substeps: [
-      {
-        cmd: [
-          `
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash; \\
-            export NVM_DIR="$HOME/.nvm"; \\
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; \\
-            [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"; \\
-            nvm i node; \\
-            nvm i 21; \\
-            sudo apt-get install npm -y; \\
-            sudo npm i -g corepack; \\
-            sudo npm i -g pnpm; \\
-            corepack enable; \\
-            pnpm i -g pnpm;
-          `,
-        ],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'installing node packages',
-    substeps: [
-      {
-        cmd: ['pnpm i -g prettier typescript tsx clockify'],
-      },
-    ],
-  },
-  {
     // disabled: I always mount another home directory from another drive
     enabled: false,
     title: 'remove useless dirs',
@@ -933,15 +1125,6 @@ const steps: Steps[] = [
         cmd: [
           `cd $HOME && sudo rm -rf Public Videos Templates Pictures Music Documents`,
         ],
-      },
-    ],
-  },
-  {
-    title: 'set time zone',
-    category: 'common',
-    substeps: [
-      {
-        cmd: [`sudo timedatectl set-timezone Africa/Casablanca`],
       },
     ],
   },
@@ -1001,67 +1184,6 @@ const steps: Steps[] = [
       },
     ],
   },
-  {
-    category: 'desktop',
-    title: 'configuring permissions',
-    substeps: [
-      {
-        cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
-
-          // don't set "root" password on installation so you don't need these
-          // 'sudo apt-get install sudo -y',
-          // 'sudo usemod -aG sudo venego'
-        ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'mount external home on top of existing one',
-    substeps: [
-      {
-        enabled: false,
-        cmd: [
-          `# get target drive label \\
-           # use the label to get UUID using blkid /dev/[target label]`
-        ],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'setting up fstab',
-    substeps: [
-      {
-        cmd: [
-          `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" /media/D ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
-          `echo "/media/D/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-          `echo "/media/D/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-          `echo "/media/D/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-        ]
-      }
-    ],
-  },
-  {
-    category: 'common',
-    title: 'setup swap file',
-    substeps: [
-      {
-        cmd: [
-          'sudo swapoff -a',
-          'sudo touch /swapfile',
-          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=16000',
-          'sudo chmod 600 /swapfile',
-          'sudo mkswap /swapfile',
-          'sudo swapon /swapfile',
-          'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
-          'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
-          'sudo findmnt --verify --verbose',
-        ],
-      },
-    ],
-  }
 ];
 
 const manualSteps = [
@@ -1139,22 +1261,36 @@ function listApps() {
   console.log(appsListOutput)
 }
 
-async function runSteps() {
+interface RunStepsProps {
+  offsetID: string | undefined;
+  dryRun: boolean;
+}
+async function runSteps({ offsetID, dryRun }: RunStepsProps) {
+  const stepsVars = {
+    reachedOffsetID: false,
+  }
+
   const stepsList = steps;
   for (let stepIndex = 0; stepIndex < stepsList.length; stepIndex++) {
     const step = stepsList[stepIndex];
-    if (step.title == 'stopper') {
-      process.exit(0);
-    }
 
-    if (
-      step.category !== config.defaults.template &&
-      step.category !== 'common'
-    ) {
-      continue;
-    }
-    if (step.enabled === false) {
-      continue;
+    // stopper for easy debugging
+    if (step.title == 'stopper') { process.exit(0); }
+    // ignore non-specified categories (except for 'common')
+    if (step.category !== config.defaults.template && step.category !== 'common') { continue; }
+    // ignore disabled steps
+    if (step.enabled === false) { continue; }
+    // start from a specific step.id
+    // console.log({
+    //   offsetID,
+    //   stepsVars,
+    //   cond1: typeof offsetID == 'string',
+    //   cond2: stepsVars.reachedOffsetID == false
+    // });
+    if (typeof offsetID == 'string' && stepsVars.reachedOffsetID == false) {
+      console.log('before offset', step.title)
+      if (offsetID != step.id) { continue; }
+      stepsVars.reachedOffsetID = true;
     }
 
     console.log(''); //* don't remove
@@ -1187,7 +1323,7 @@ async function runSteps() {
           const app = substep.apps[appIndex];
 
           print.title(`${appIndex + 1} / ${appsList.length} - [app] ${app}`);
-          if (!config.dryRun) {
+          if (!dryRun) {
             try {
               command(`${config.installCommandPrefix} ${app}`);
             } catch (err) {
@@ -1203,7 +1339,7 @@ async function runSteps() {
 
       if (substep.cmd) {
         const cmdList = substep.cmd;
-        if (!config.dryRun && Array.isArray(cmdList)) {
+        if (!dryRun && Array.isArray(cmdList)) {
           for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
             const cmd = cmdList[cmdIndex];
 
@@ -1252,27 +1388,32 @@ const argsShortHand = {
   l: 'list',
 };
 
-interface Arg {
-  value: boolean | string | number,
+interface Arg<VT> {
+  value: VT
   dependencies?: string[],
   dependencyOf?: string[],
+  isMethod?: boolean
 }
 type Args = {
-  help: { value: boolean },
-  run: { value: boolean },
-  check: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
-  dryRun: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
-  list: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
-  listApps: { value: boolean },
-  listDisabledSteps: { value: boolean, dependencies?: string[], dependencyOf?: string[] },
+  help: Arg<boolean>,
+  run: Arg<boolean>,
+  check: Arg<boolean>,
+  dryRun: Arg<boolean>,
+  list: Arg<boolean>,
+  listApps: Arg<boolean>,
+  listDisabledSteps: Arg<boolean>,
+  offsetID: Arg<string | undefined>,
 };
 //! order matters
 const defaultArgs: Args = {
   help: {
-    value: false
+    value: false,
+    isMethod: true,
   },
+
   run: {
-    value: false
+    value: false,
+    isMethod: true,
   },
   check: {
     value: true,
@@ -1282,18 +1423,25 @@ const defaultArgs: Args = {
     value: false,
     dependencyOf: ['run'],
   },
+
   list: {
     value: false,
-    dependencies: ['listDisabledSteps'],
+    dependencies: ['listApps', 'listDisabledSteps'],
+    isMethod: true,
   },
   listApps: {
-    value: false
+    value: false,
+    dependencyOf: ['list'],
   },
   listDisabledSteps: {
     value: false,
     dependencyOf: ['list'],
-  }
-};
+  },
+
+  offsetID: {
+    value: undefined,
+  },
+} as const;
 
 function handleSqueezedFlags(argsString) {
   const shortArgsList = argsString.split('-')[1].split('');
@@ -1331,9 +1479,22 @@ function handleFullArgs(args: string) {
   if (args.includes(':')) {
     const [key, value] = args.split(':');
     // todo: parse value types
-    defaultArgs[args].value = value;
+    defaultArgs[key].value = value;
   } else {
     defaultArgs[args].value = true;
+  }
+}
+
+function parseAdHocArgs() {
+  // syncing between the fragmented option 'dryRun'
+  if (config.dryRun == true || defaultArgs.dryRun.value == true) {
+    defaultArgs.dryRun.value = true;
+    config.dryRun = true;
+  }
+
+  // 'dryRun' should activate the 'run' option
+  if (defaultArgs.dryRun.value == true) {
+    defaultArgs.run.value = true;
   }
 }
 
@@ -1353,11 +1514,14 @@ function parseArgs() {
       },
     );
 
+  parseAdHocArgs();
+
   return defaultArgs;
 }
 
 const main = async () => {
   const args = parseArgs();
+  console.log(args);
 
   if (args.check) {
     print.info('setting up environment...');
@@ -1371,6 +1535,11 @@ const main = async () => {
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     // list steps
     list: () => {
+      if (args.listApps) {
+        listApps();
+        return;
+      }
+
       // console.log({ includeDisabled: Boolean(includeDisabled) })
       let stepsList = steps;
       if (!args.listDisabledSteps) {
@@ -1383,23 +1552,23 @@ const main = async () => {
         );
       });
     },
-    listApps: () => {
-      listApps();
-    },
     help: () => {
-      print.info('WIP :)');
+      print.info(`all args are key-value pairs, if the value is true, you just type it without the ':'`);
+      print.info('Usage: deno run --allow-all script-path [...options]')
+      print.info('e.g: deno run --allow-all script-path dryRun:true')
+      print.info(`e.g: deno run --allow-all script-path dryRun`);
     },
     run: async () => {
       if (args.check && !loadEnv().allSet) { return; }
       if (!args.run) { return; }
 
-      await runSteps();
+      await runSteps({ offsetID: args.offsetID.value, dryRun: args.dryRun.value });
     },
   };
 
   for (const argKey of Object.keys(args)) {
-    const arg = args[argKey];
-    if (!arg.dependencyOf) {
+    const arg = args[argKey as keyof Args];
+    if (!arg.dependencyOf && arg.isMethod) {
       if (arg.value == false) { continue; }
       await options[argKey]();
     }
@@ -1419,8 +1588,7 @@ await main();
 // this requires lots of non-standard meta-programming for generating hashes of steps, etc
 
 // FIX
-// TODO: /etc/apt, /etc/X11/xorg.conf and /etc/usr/sahre/keyrings are not copied  before installing apps
-// TODO: the install.sh script is not working correctly
+// [X] TODO: the install.sh script is not working correctly
 
 // UX
 // TODO: add undo function for each step.
