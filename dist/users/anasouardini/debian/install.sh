@@ -9,13 +9,14 @@ function installIfDoesNotExist(){
   for package in "$@"; do
     command -v "$package" > /dev/null 2>&1;
     if [ ! $? -eq 0 ]; then
-      echo "installing ${package}...";
+      echo "- installing ${package}...";
       sudo apt install $package -y
     fi
   done
 }
 
 # deno needs unzip
+echo "- [ ] installing dependencies.."
 installIfDoesNotExist curl wget unzip
 
 #-------- install deno
@@ -28,7 +29,7 @@ if [ ! $? -eq 0 ]; then
 fi
 
 #------------ run the installer (TS script)
-echo "download post-installation script";
+echo "- [ ] download post-installation script";
 installerPath="./${githubUsername}-installer.ts";
 if [ -f $installerPath ]; then
   echo "The file: '${installerPath}' is going to be removed.";
@@ -36,6 +37,8 @@ if [ -f $installerPath ]; then
   rm -rf $installerPath;
 fi
 
+echo "> running: wget -O $installerPath \"${host}/users/${githubUsername}/debian/installer.ts\"";
 wget -O $installerPath "${host}/users/${githubUsername}/debian/installer.ts";
-echo "running the post-installation script";
+
+echo "running the post-installation script at ${installerPath}";
 $HOME/.deno/bin/deno run --allow-all $installerPath $installerArgs;
