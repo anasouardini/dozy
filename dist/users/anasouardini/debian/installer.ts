@@ -273,9 +273,10 @@ const loadEnv = () => {
 // ----------------------------- STEPS ------------------------------
 // ------------------------------------------------------------------
 
+type Category = 'common' | 'homeServer' | 'desktop' | 'termux' | 'arch' | 'bro' | 'myDrive';
 type Steps = {
   title: string;
-  category: 'common' | 'homeServer' | 'desktop' | 'termux';
+  category: Category | Category[];
   enabled?: boolean;
   id?: string;
   dependsOn?: string[];
@@ -308,6 +309,7 @@ const steps: Steps[] = [
         apps: ['nala'],
       },
       {
+        enabled: false,
         title: "Installing and setting up flatpak",
         id: 'flatpak',
         apps: ['flatpak'],
@@ -319,7 +321,8 @@ const steps: Steps[] = [
       {
         title: "Installing Nix (the package manager)",
         cmd: [
-          'sh <(curl -L https://nixos.org/nix/install) --daemon'
+          'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
+	  'sudo mount --bind /media/D/bkp/nix/store /nix/store'
         ],
       },
     ],
@@ -506,6 +509,7 @@ const steps: Steps[] = [
         ],
       },
       {
+        enabled: false, // enable flatpak step if you want to use this.
         title: 'installing media tools from flatpak',
         cmd: [
           // 'sudo apt-get install flatpak -y',
@@ -629,7 +633,7 @@ const steps: Steps[] = [
     title: 'security',
     substeps: [
       {
-        apps: ['firejail', 'apparmor'],
+        apps: [/*'firejail',*/ 'apparmor'],
       },
       {
         enabled: false,
@@ -1032,7 +1036,9 @@ const steps: Steps[] = [
       {
         cmd: [
           `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" /media/D ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
-          `echo "/media/D/bkp/homeSetup/home /home	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "/media/D/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "/media/D/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "/media/D/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       }
     ],
