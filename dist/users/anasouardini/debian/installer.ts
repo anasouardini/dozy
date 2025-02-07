@@ -301,8 +301,58 @@ type Steps = {
     dependsOn?: string[];
   }[];
 };
+
+// ======== STAGES: ==========
+// STAGE I: only really essential stesp for setting up a desktop are ran
+//         - settings (time, permissions, restore /etc), xorg, i3, polybar, setup-fstab, terminal, zsh-config
+// STAGE II: the rest of the steps
+//         - make sure to inform the user when important stesp are done
+//         - e.g: browser, vscode, clockify, nodejs, tsx
 const steps: Steps[] = [
   // first-essential
+  {
+    category: 'common',
+    title: 'installing apt config dependencies',
+    substeps: [
+      {
+        apps: ['rsync'],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'restore config',
+    substeps: [
+      {
+        title: 'restore apt config',
+        cmd: [
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
+        ],
+      },
+      {
+        title: 'restore keyrings for apt',
+        cmd: [
+          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
+          // `mkdir -p $HOME/.local/share;`,
+          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$config.username/.local/share/keyrings $HOME/.local/share/`,
+        ],
+      },
+      {
+        title: 'updating repositories',
+        cmd: ['sudo apt-get update -y;'],
+      },
+    ],
+  },
+  {
+    title: `Checking if you are root (which you shouldn't be!)`,
+    category: 'common',
+    substeps: [
+      {
+        //? this will ensure that you're not running this as root
+        cmd: [`[[ $(whoami) == "root" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`],
+      },
+    ],
+  },
   {
     title: 'set time zone',
     category: 'common',
@@ -319,21 +369,7 @@ const steps: Steps[] = [
       {
         cmd: [
           'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
-
-          // don't set "root" password on installation so you don't need these
-          // 'sudo apt-get install sudo -y',
-          // 'sudo usemod -aG sudo venego'
         ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'Updating sources and packages',
-    substeps: [
-      {
-        title: 'updating and upgrading',
-        cmd: ['sudo apt-get update -y'],
       },
     ],
   },
@@ -358,16 +394,6 @@ const steps: Steps[] = [
     substeps: [
       {
         apps: ['xorg'],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'password GUI prompt',
-    substeps: [
-      {
-        title: 'a password prompt for privs escalation (for GUI apps)',
-        apps: ['policykit-1-gnome', 'pinentry-qt'],
       },
     ],
   },
@@ -447,21 +473,6 @@ const steps: Steps[] = [
   },
   {
     category: 'desktop',
-    title: 'browsers',
-    substeps: [
-      {
-        apps: ['brave-browser'],
-      },
-      {
-        // essential setup shouldn't install these
-        // if you need these enabled, move them beyond the 'reboot/checkpoint' step
-        enabled: false,
-        apps: ['chromium', 'google-chrome-stable'],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
     title: 'setting up fstab',
     substeps: [
       {
@@ -470,6 +481,17 @@ const steps: Steps[] = [
           `echo "${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
           `echo "${config.bkp.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
           `echo "${config.bkp.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+        ]
+      }
+    ],
+  },
+  {
+    category: 'common',
+    title: 'reduce grub timeout',
+    substeps: [
+      {
+        cmd: [
+          `sudo sed '|^GRUB_TIMEOUT=\d+5$|GRUB_TIMEOUT=1|' -i /etc/default/grub`,
         ]
       }
     ],
@@ -494,7 +516,7 @@ const steps: Steps[] = [
           `echo -e "WantedBy=multi-user.target" | tee -a ${config.path.checkpointDaemon}`,
           `echo -e "" | tee -a ${config.path.checkpointDaemon}`,
           `echo "[Service]" | tee -a ${config.path.checkpointDaemon}`,
-          `echo "Type=simple" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "Type=oneshot" | tee -a ${config.path.checkpointDaemon}`,
           `echo "Environment=DISPLAY=:0" | tee -a ${config.path.checkpointDaemon}`,
           `echo "ExecStart=/usr/bin/${config.defaults.terminal} --hold -e zsh -c '${config.path.checkpointScript}; zsh'" | tee -a ${config.path.checkpointDaemon}`,
           // enabling checkpoint daemon
@@ -511,6 +533,14 @@ const steps: Steps[] = [
         ]
       }
     ]
+  },
+  // the prior step will hopefully reboot before reaching this step
+  // but keep it in here just in case
+  {
+    category: 'common',
+    title: 'stopper',
+    id: 'stopper',
+    substeps: [],
   },
   // this step is ran by checkpoint-script
   {
@@ -534,6 +564,47 @@ const steps: Steps[] = [
   // SECOND-ESSENTIALS
   {
     category: 'common',
+    title: 'package managers',
+    id: 'package_managers',
+    substeps: [
+      {
+        apps: ['nala'],
+      },
+      {
+        title: "Installing and setting up flatpak",
+        id: 'flatpak',
+        apps: ['flatpak'],
+        cmd: [
+          // this needs password input, leave it within early steps
+          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
+        ],
+      },
+      {
+        title: "Installing Nix (the package manager)",
+        cmd: [
+          'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
+          'sudo mount --bind /media/D/bkp/nix/store /nix/store'
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'browsers',
+    substeps: [
+      {
+        apps: ['brave-browser'],
+      },
+      {
+        // essential setup shouldn't install these
+        // if you need these enabled, move them beyond the 'reboot/checkpoint' step
+        enabled: false,
+        apps: ['chromium', 'google-chrome-stable'],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'installing nvm and node',
     substeps: [
       {
@@ -552,6 +623,21 @@ const steps: Steps[] = [
             pnpm i -g pnpm;
           `,
         ],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'databases',
+    substeps: [
+      {
+        enabled: false, // mysql doesn't suuport unattended installation
+        title: 'installing MySQL',
+        apps: ['mysql-server'],
+      },
+      {
+        title: 'installing sqlite3',
+        apps: ['sqlite3'],
       },
     ],
   },
@@ -581,7 +667,7 @@ const steps: Steps[] = [
         title: '',
         apps: ['code'],
       },
-      // todo: add cursor
+      // todo: add cursor's appimage
       {
         enabled: false,
         title: 'installing zed',
@@ -590,44 +676,12 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: 'common',
-    title: 'databases',
+    category: 'desktop',
+    title: 'password GUI prompt',
     substeps: [
       {
-        enabled: false, // mysql doesn't suuport unattended installation
-        title: 'installing MySQL',
-        apps: ['mysql-server'],
-      },
-      {
-        title: 'installing sqlite3',
-        apps: ['sqlite3'],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'package managers',
-    id: 'package_managers',
-    substeps: [
-      {
-        apps: ['nala'],
-      },
-      {
-        enabled: false,
-        title: "Installing and setting up flatpak",
-        id: 'flatpak',
-        apps: ['flatpak'],
-        cmd: [
-          // this needs password input, leave it within early steps
-          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
-        ],
-      },
-      {
-        title: "Installing Nix (the package manager)",
-        cmd: [
-          'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
-          'sudo mount --bind /media/D/bkp/nix/store /nix/store'
-        ],
+        title: 'a password prompt for privs escalation (for GUI apps)',
+        apps: ['policykit-1-gnome', 'pinentry-qt'],
       },
     ],
   },
@@ -647,103 +701,6 @@ const steps: Steps[] = [
           'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
           'sudo findmnt --verify --verbose',
         ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'installing apt config dependencies',
-    substeps: [
-      {
-        apps: ['rsync'],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'restore config',
-    substeps: [
-      {
-        title: 'restore apt config',
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
-        ],
-      },
-      {
-        title: 'restore keyrings for apt',
-        cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
-          // `mkdir -p $HOME/.local/share;`,
-          // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$config.username/.local/share/keyrings $HOME/.local/share/`,
-        ],
-      },
-      {
-        title: 'updating repositories',
-        cmd: ['sudo apt-get update -y;'],
-      },
-    ],
-  },
-  {
-    enabled: false,
-    category: 'common',
-    title: 'bluetooth setup',
-    substeps: [
-      /////////////////////////////////// bluetooth
-      //// these might be needed
-      // bluetooth gnome-bluetooth bluez bluez-tools pulseaudio-module-bluetooth
-      // blueman
-
-      //// these are the apparently required packages
-      // bluez bluez-tools pulseaudio-module-bluetooth pipewire pipewire-pulse
-
-      //// this fixes a very annoying bug
-      // systemctl --user --now enable pipewire pipewire-pulse
-
-      {
-        apps: [
-          'bluez',
-          'bluez-tools',
-          'pulseaudio-module-bluetooth',
-          'pipewire',
-          'pipewire-pulse',
-        ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'net stuff',
-    substeps: [
-      {
-        apps: [
-          'network-manager',
-          // "wondershaper",
-          'wget',
-          'curl',
-          'arp-scan',
-          'sshfs',
-        ],
-      },
-      {
-        enabled: false,
-        apps: [
-          'netplan.io',
-          // "dsniff",
-          'proftpd',
-          'hping3',
-          // "speedtest-cli",
-          // "macchanger", // can't install unattendenly
-        ],
-      },
-    ],
-  },
-  {
-    enabled: false,
-    category: 'common',
-    title: 'tools for building source files',
-    substeps: [
-      {
-        apps: ['build-essential', 'libx11-dev', 'gcc', 'make', 'cmake'],
       },
     ],
   },
@@ -846,6 +803,33 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
+    title: 'net stuff',
+    substeps: [
+      {
+        apps: [
+          'network-manager',
+          // "wondershaper",
+          'wget',
+          'curl',
+          'arp-scan',
+          'sshfs',
+        ],
+      },
+      {
+        enabled: false,
+        apps: [
+          'netplan.io',
+          // "dsniff",
+          'proftpd',
+          'hping3',
+          // "speedtest-cli",
+          // "macchanger", // can't install unattendenly
+        ],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'basic misc tools',
     substeps: [
       {
@@ -865,6 +849,43 @@ const steps: Steps[] = [
     ],
   },
   {
+    enabled: false,
+    category: 'common',
+    title: 'bluetooth setup',
+    substeps: [
+      /////////////////////////////////// bluetooth
+      //// these might be needed
+      // bluetooth gnome-bluetooth bluez bluez-tools pulseaudio-module-bluetooth
+      // blueman
+
+      //// these are the apparently required packages
+      // bluez bluez-tools pulseaudio-module-bluetooth pipewire pipewire-pulse
+
+      //// this fixes a very annoying bug
+      // systemctl --user --now enable pipewire pipewire-pulse
+
+      {
+        apps: [
+          'bluez',
+          'bluez-tools',
+          'pulseaudio-module-bluetooth',
+          'pipewire',
+          'pipewire-pulse',
+        ],
+      },
+    ],
+  },
+  {
+    enabled: false,
+    category: 'common',
+    title: 'tools for building source files',
+    substeps: [
+      {
+        apps: ['build-essential', 'libx11-dev', 'gcc', 'make', 'cmake'],
+      },
+    ],
+  },
+  {
     category: 'common',
     title: 'disk tools',
     substeps: [
@@ -872,11 +893,11 @@ const steps: Steps[] = [
         title: 'partitioning, resizing, etc',
         apps: ['dosfstools', 'gdisk', 'lvm2', 'smartmontools'],
       },
-      {
-        enabled: false,
-        title: 'backup',
-        apps: ['timeshift'],
-      },
+      // {
+      //   enabled: false,
+      //   title: 'backup',
+      //   apps: ['timeshift'],
+      // },
     ],
   },
   {
@@ -992,6 +1013,7 @@ const steps: Steps[] = [
         apps: ['diodon'],
       },
       {
+        enabled: false,
         title: 'wm and status bar - wayland',
         apps: ['sway', 'swaync', 'waybar'],
       },
@@ -1187,9 +1209,8 @@ const steps: Steps[] = [
 ];
 
 const manualSteps = [
-  're-login for the default shell to be set',
-  'sudo apt install mysql-server',
-  'reduce grub timeout to 1 sec',
+  // 're-login for the default shell to be set', // we re-login automatically now
+  'sudo apt install mysql-server -y',
   'sudo apt-get install grub-imageboot-y; add rescue iso to /boot/images; sudo update-grub2;',
 ];
 
@@ -1275,7 +1296,7 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
     const step = stepsList[stepIndex];
 
     // stopper for easy debugging
-    if (step.title == 'stopper') { process.exit(0); }
+    if (step.title == 'stopper' || step.id == 'stopper') { process.exit(0); }
     // ignore non-specified categories (except for 'common')
     if (step.category !== config.defaults.template && step.category !== 'common') { continue; }
     // ignore disabled steps
@@ -1308,9 +1329,7 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
     ) {
       const substep = substepsList[substepIndex];
 
-      if (substep.enabled === false) {
-        continue;
-      }
+      if (substep.enabled === false) { continue; }
 
       print.title(
         `${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? 'untitled substep'
@@ -1583,20 +1602,26 @@ await main();
 // --------------------- TODO --------------------
 // -----------------------------------------------
 
-// feat
-// TODO: specify whether a step is a dependency for another; don't run the step which its depenency was not successful.
-// this requires lots of non-standard meta-programming for generating hashes of steps, etc
+// Enhancement
+// [X] reduce steps in 1st stage (before reboot)
+// [ ] add a notification system so you can inform the user
+//   - when important steps are done
+
+// FEAT
+// [ ] specify whether a step is a dependency for another; don't run the step which its depenency was not successful.
+//   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
 
 // FIX
-// [X] TODO: the install.sh script is not working correctly
+// [X] the install.sh script is not working correctly
+// [X] make sure the script is run as normal user
 
 // UX
-// TODO: add undo function for each step.
-// TODO: interactive configuration
+// [ ] add undo function for each step.
+// [ ] interactive configuration
 
 // DEBUGGING
-// TODO: option to go through each step and prompt for "yes/no"
-// TODO: option to run a step/sub-step by it's order
-// TODO: fix mode — go over the unsuccessful steps
-// TODO: dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
-// TODO: dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
+// [ ] option to go through each step and prompt for "yes/no"
+// [ ] option to run a step/sub-step by it's order
+// [ ] fix mode — go over the unsuccessful steps
+// [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
+// [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
