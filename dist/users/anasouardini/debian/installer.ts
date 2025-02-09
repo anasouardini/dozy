@@ -479,8 +479,6 @@ const steps: Steps[] = [
         cmd: [
           `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" ${config.bkp.drives.D.mountPath} ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
           `echo "${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-          `echo "${config.bkp.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-          `echo "${config.bkp.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       }
     ],
@@ -491,7 +489,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `sudo sed '|^GRUB_TIMEOUT=\d+5$|GRUB_TIMEOUT=1|' -i /etc/default/grub`,
+          `sudo sed 's|^GRUB_TIMEOUT=[0-9]\+$|GRUB_TIMEOUT=1|' -i /etc/default/grub`,
         ]
       }
     ],
@@ -550,7 +548,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          `systemctl --user disable ${config.path.checkpointDaemon}`,
+          `systemctl --user disable ${config.path.checkpointDaemon}`, // it's disabled automatically, but leave this just in case
           `rm -rf ${config.path.checkpointDaemon}`,
           `rm -rf ${config.path.checkpointScript}`
         ]
@@ -576,14 +574,17 @@ const steps: Steps[] = [
         apps: ['flatpak'],
         cmd: [
           // this needs password input, leave it within early steps
-          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo'
+          'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
+          'sudo mount --bind /media/D/bkp/flatpak /var/lib/flatpak',
+          `echo "${config.bkp.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ],
       },
       {
         title: "Installing Nix (the package manager)",
         cmd: [
           'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
-          'sudo mount --bind /media/D/bkp/nix/store /nix/store'
+          'sudo mount --bind /media/D/bkp/nix/store /nix/store',
+          `echo "${config.bkp.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ],
       },
     ],
