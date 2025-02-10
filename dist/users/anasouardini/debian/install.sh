@@ -5,6 +5,11 @@ host="https://dozy.netlify.app";
 githubUsername='anasouardini';
 installerArgs=$@;
 
+if [[ $(whoami) = 'root' ]];then
+  echo "run as normal user";
+  exit 1;
+fi
+
 function installIfDoesNotExist(){
   for package in "$@"; do
     command -v "$package" > /dev/null 2>&1;
