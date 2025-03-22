@@ -632,9 +632,20 @@ const steps: Steps[] = [
     title: 'databases',
     substeps: [
       {
-        enabled: false, // mysql doesn't suuport unattended installation
+        enabled: false, // mysql sux, doesn't suuport unattended installation
         title: 'installing MySQL',
-        apps: ['mysql-server'],
+	cmd: [
+	  `sudo apt install mysql-server --mode unattended --mysqluser root --mysqlpassword root`,
+	  `sudo mysql -u root -p -e "CREATE USER 'venego'@'localhost' IDENTIFIED BY 'venego'"`,
+	  `sudo mysql -u root -p -e "GRANT ALL PRIVILEGES ON *.* TO 'venego'@'localhost' WITH GRANT OPTION"`
+	]
+      },
+      {
+        title: 'mysql DBs restore',
+	cmd: [
+          'sudo mount --bind /media/D/bkp/bkpos/var/lib/mysql /var/lib/mysql',
+          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/mysql	/var/lib/mysql	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+	]
       },
       {
         title: 'installing sqlite3',
@@ -766,6 +777,8 @@ const steps: Steps[] = [
           // "xloadimage", // it has 'xsetbg': used for setting BG image
           // "imagemagick",
           "feh",
+	  'xzoom', // magnification tool
+	  // 'kmag', // magnification tool
         ],
       },
       {
@@ -808,6 +821,7 @@ const steps: Steps[] = [
     substeps: [
       {
         apps: [
+          'net-tools',
           'network-manager',
           // "wondershaper",
           'wget',
@@ -827,6 +841,21 @@ const steps: Steps[] = [
           // "macchanger", // can't install unattendenly
         ],
       },
+      {
+	title: 'network monitoring'
+	apps: ['vnstat'],
+	cmd: [
+          'sudo mount --bind /media/D/bkp/bkpos/var/lib/vnstat /var/lib/vnstat',
+          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+	]
+      },
+      {
+	title: 'setting dns'
+	cmd: [
+          'echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf',
+          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+	]
+      }
     ],
   },
   {
@@ -846,6 +875,26 @@ const steps: Steps[] = [
           'preload', // for preloading frequently used apps in memory
           'picom', // for windows transparency
         ],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'phone integration tools',
+    substeps: [
+      {
+        cmd: [
+          `# for Debian/Ubuntu
+           sudo apt install ffmpeg libsdl2-2.0-0 adb wget \
+           gcc git pkg-config meson ninja-build libsdl2-dev \
+           libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
+           libswresample-dev libusb-1.0-0 libusb-1.0-0-dev`,
+           `
+	   cd ~/home/repos;
+	   git clone https://github.com/Genymobile/scrcpy
+           cd scrcpy
+           ./install_release.sh`
+        ]
       },
     ],
   },

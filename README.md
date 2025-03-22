@@ -55,6 +55,7 @@ bash <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 │   │   ├── ideas.md
 │   │   ├── installer.ts
 │   │   ├── install.sh
+│   │   ├── preseed.cfg
 │   │   └── qemu.cfg
 │   └── nixos
 └── sample
