@@ -1054,6 +1054,11 @@ const steps: Steps[] = [
         title: 'notifications',
         apps: ['dbus-x11', 'notification-daemon', 'libnotify-bin', 'dunst'],
       },
+      // sometimes 'dunst' is so buggy, I need a simpler solution
+      {
+        title: 'notifications-done-simply',
+        apps: ['zenity'],
+      },
       {
         title: 'wm and status bar - X11',
         apps: ['i3', 'polybar'],
