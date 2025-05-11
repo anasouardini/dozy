@@ -761,7 +761,7 @@ const steps: Steps[] = [
       {
         apps: [
           'vlc',
-          'yt-dlp',
+          // 'yt-dlp',
           'flameshot',
           'simplescreenrecorder',
           'zathura',
