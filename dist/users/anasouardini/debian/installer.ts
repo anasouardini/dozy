@@ -363,6 +363,20 @@ const steps: Steps[] = [
     ],
   },
   {
+    title: 'disable beep sound',
+    category: 'common',
+    substeps: [
+      {
+        cmd: [`
+               # disable system beep
+               sudo modprobe -r pcspkr 2>/dev/null || true
+               # disable system beep (2nd method)
+               ( echo -n -e '\\x1b[11m' > /dev/tty0 ) 2>/dev/null
+            `],
+      },
+    ],
+  },
+  {
     category: 'desktop',
     title: 'configuring permissions',
     substeps: [
