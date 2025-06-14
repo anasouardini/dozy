@@ -382,7 +382,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt, /home/$USER/.local/bin/kmonad" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
         ],
       },
     ],
@@ -412,15 +412,6 @@ const steps: Steps[] = [
     ],
   },
   {
-    category: 'desktop',
-    title: 'audio tools',
-    substeps: [
-      {
-        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
-      },
-    ],
-  },
-  {
     category: 'common',
     title: 'mouse/kb setup',
     substeps: [
@@ -441,85 +432,7 @@ const steps: Steps[] = [
       },
     ],
   },
-  {
-    category: 'desktop',
-    title: 'desktop user interface UI - only the essential parts',
-    substeps: [
-      {
-        title: 'wm and status bar - X11',
-        apps: ['i3', 'polybar'],
-      },
-      {
-        title: 'app luncher and menu',
-        apps: ['suckless-tools', /*'rofi'*/],
-      },
-      {
-        title: 'hot key daemon',
-        apps: ['sxhkd'],
-      },
-      {
-        title: 'installing keyboard key mapper (keyd)',
-	enabled: false,
-        cmd: [
-          `
-          reposDIR="$HOME/repos"
-	  mkdir -p $reposDIR;
-          DIR="$reposDIR/keyd"
-          DATE=$(date +%F)
-          if [ -d "$DIR" ]; then
-              NEW_DIR="${DIR}_$DATE"
-              mv "$DIR" "$NEW_DIR"
-              echo "Directory renamed to: $NEW_DIR"
-          fi
-	  cd $reposDIR; \\
-          git clone https://github.com/rvaiya/keyd; \\
-          sudo apt-get install gcc make -y; \\
-          cd keyd; \\
-          make && sudo make install; \\
-          sudo systemctl enable keyd && sudo systemctl start keyd; \\
-          sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
-          `,
-        ],
-      },,
-      {
-        title: 'installing keyboard key mapper (kmonad)',
-        cmd: [
-          `
-          reposDIR="$HOME/repos"
-	  mkdir -p $reposDIR;
-          DIR="$reposDIR/kmonad"
-          DATE=$(date +%F)
-          if [ -d "$DIR" ]; then
-              NEW_DIR="${DIR}_$DATE"
-              mv "$DIR" "$NEW_DIR"
-              echo "Directory renamed to: $NEW_DIR"
-          fi
-	  cd $reposDIR; \\
-          sudo apt update
-          sudo apt install -y build-essential libev-dev libxcb-xkb-dev libx11-dev libxkbfile-dev libxrandr-dev libxinerama-dev libxfixes-dev
-          curl -sSL https://get.haskellstack.org/ | sh
-          git clone https://github.com/kmonad/kmonad.git
-          cd kmonad
-          stack setup; stack build; stack install
-          `,
-        ],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'terminal',
-    substeps: [
-      {
-        apps: [
-          config.defaults.terminal,
-          //  'kitty'
-        ],
-      },
-    ],
-  },
-  {
+    {
     category: 'desktop',
     title: 'setting up fstab',
     substeps: [
@@ -541,6 +454,28 @@ const steps: Steps[] = [
         ]
       }
     ],
+  },
+  {
+    category: 'desktop',
+    title: 'terminal',
+    substeps: [
+      {
+        apps: [
+          config.defaults.terminal,
+          //  'kitty'
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'desktop user interface UI - only the i3 before rebooting and then the rest after reboot',
+    substeps: [
+      {
+        title: 'wm and status bar - X11',
+        apps: ['i3'],
+      },
+    ]
   },
   // make checkpoint-daemon and checkpoint-script
   {
@@ -581,14 +516,14 @@ const steps: Steps[] = [
     ]
   },
   // the prior step will hopefully reboot before reaching this step
-  // but keep it in here just in case
+  // but keep the stopper step in here just in case
   {
     category: 'common',
     title: 'stopper',
     id: 'stopper',
     substeps: [],
   },
-  // this step is ran by checkpoint-script
+  // this step is ran by checkpoint-script after reboot
   {
     title: 'picking installation from before rebooting',
     category: 'common',
@@ -608,6 +543,82 @@ const steps: Steps[] = [
   //! TODO: - so you have to test the apps one-by-one to konw which ones to be careful with
 
   // SECOND-ESSENTIALS
+  {
+    category: 'desktop',
+    title: 'desktop user interface UI - after the essentials',
+    substeps: [
+      {
+        title: 'wm and status bar - X11',
+        apps: ['i3', 'polybar'],
+      },
+      {
+        title: 'app luncher and menu',
+        apps: ['suckless-tools', /*'rofi'*/],
+      },
+      {
+        title: 'hot key daemon',
+        apps: ['sxhkd'],
+      },
+      {
+        title: 'installing keyboard key mapper (keyd)',
+	enabled: false,
+        cmd: [
+          `
+          reposDIR="$HOME/repos"
+	  mkdir -p $reposDIR;
+          DIR="$reposDIR/keyd"
+          DATE=$(date +%F)
+          if [ -d "$DIR" ]; then
+              NEW_DIR="${DIR}_$DATE"
+              mv "$DIR" "$NEW_DIR"
+              echo "Directory renamed to: $NEW_DIR"
+          fi
+	  cd $reposDIR; \\
+          git clone https://github.com/rvaiya/keyd; \\
+          sudo apt-get install gcc make -y; \\
+          cd keyd; \\
+          make && sudo make install; \\
+          sudo systemctl enable keyd && sudo systemctl start keyd; \\
+          sudo usermod -aG keyd $USER; \\
+          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          `,
+        ],
+      },
+      {
+        title: 'installing keyboard key mapper (kmonad)',
+        cmd: [
+          `
+          reposDIR="$HOME/repos"
+	  mkdir -p $reposDIR;
+          DIR="$reposDIR/kmonad"
+          DATE=$(date +%F)
+          if [ -d "$DIR" ]; then
+              NEW_DIR="${DIR}_$DATE"
+              mv "$DIR" "$NEW_DIR"
+              echo "Directory renamed to: $NEW_DIR"
+          fi
+	  cd $reposDIR; \\
+          sudo apt update
+          sudo apt install -y build-essential libev-dev libxcb-xkb-dev libx11-dev libxkbfile-dev libxrandr-dev libxinerama-dev libxfixes-dev
+          curl -sSL https://get.haskellstack.org/ | sh
+          git clone https://github.com/kmonad/kmonad.git
+          cd kmonad
+          stack setup; stack build; stack install;
+          echo "$USER ALL=(ALL:ALL) NOPASSWD: /home/$USER/.local/bin/kmonad" | sudo tee -a /etc/sudoers;
+          `,
+        ],
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'audio tools',
+    substeps: [
+      {
+        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
+      },
+    ],
+  },
   {
     category: 'common',
     title: 'package managers',
@@ -817,9 +828,9 @@ const steps: Steps[] = [
           // "obs-studio",
           // "cheese",
           'mpv',
-          'mpd',
-          'ncmpcpp',
-          'mpc',
+          // 'mpd',
+          // 'ncmpcpp',
+          // 'mpc',
           'sxiv',
           'gimp',
           // "xloadimage", // it has 'xsetbg': used for setting BG image
