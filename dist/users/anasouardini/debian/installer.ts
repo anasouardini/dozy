@@ -382,7 +382,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt, /home/$USER/.local/bin/kmonad" | sudo tee -a /etc/sudoers;',
         ],
       },
     ],
@@ -459,8 +459,19 @@ const steps: Steps[] = [
       },
       {
         title: 'installing keyboard key mapper (keyd)',
+	enabled: false,
         cmd: [
-          `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
+          `
+          reposDIR="$HOME/repos"
+	  mkdir -p $reposDIR;
+          DIR="$reposDIR/keyd"
+          DATE=$(date +%F)
+          if [ -d "$DIR" ]; then
+              NEW_DIR="${DIR}_$DATE"
+              mv "$DIR" "$NEW_DIR"
+              echo "Directory renamed to: $NEW_DIR"
+          fi
+	  cd $reposDIR; \\
           git clone https://github.com/rvaiya/keyd; \\
           sudo apt-get install gcc make -y; \\
           cd keyd; \\
@@ -468,6 +479,29 @@ const steps: Steps[] = [
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
           sudo usermod -aG keyd $USER; \\
           sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          `,
+        ],
+      },,
+      {
+        title: 'installing keyboard key mapper (kmonad)',
+        cmd: [
+          `
+          reposDIR="$HOME/repos"
+	  mkdir -p $reposDIR;
+          DIR="$reposDIR/kmonad"
+          DATE=$(date +%F)
+          if [ -d "$DIR" ]; then
+              NEW_DIR="${DIR}_$DATE"
+              mv "$DIR" "$NEW_DIR"
+              echo "Directory renamed to: $NEW_DIR"
+          fi
+	  cd $reposDIR; \\
+          sudo apt update
+          sudo apt install -y build-essential libev-dev libxcb-xkb-dev libx11-dev libxkbfile-dev libxrandr-dev libxinerama-dev libxfixes-dev
+          curl -sSL https://get.haskellstack.org/ | sh
+          git clone https://github.com/kmonad/kmonad.git
+          cd kmonad
+          stack setup; stack build; stack install
           `,
         ],
       },
