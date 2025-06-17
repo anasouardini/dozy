@@ -311,6 +311,20 @@ type Steps = {
 const steps: Steps[] = [
   // first-essential
   {
+    title: `Checking if you are root (which you shouldn't be!)`,
+    category: 'common',
+    substeps: [
+      {
+        cmd: [
+          //? do not run as root
+	  `[[ $(whoami) == "root" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`,
+          //? you should have sudo installed
+	  `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
+	],
+      },
+    ],
+  },
+  {
     category: 'common',
     title: 'installing apt config dependencies',
     substeps: [
@@ -340,16 +354,6 @@ const steps: Steps[] = [
       {
         title: 'updating repositories',
         cmd: ['sudo apt-get update -y;'],
-      },
-    ],
-  },
-  {
-    title: `Checking if you are root (which you shouldn't be!)`,
-    category: 'common',
-    substeps: [
-      {
-        //? this will ensure that you're not running this as root
-        cmd: [`[[ $(whoami) == "root" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`],
       },
     ],
   },
@@ -384,30 +388,6 @@ const steps: Steps[] = [
         cmd: [
           'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
         ],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'change default shell to zsh and installing zap (package manager)',
-    substeps: [
-      {
-        apps: ['zsh', 'zsh-autosuggestions', 'zsh-syntax-highlighting'],
-      },
-      {
-        cmd: [
-          `sudo chsh -s /bin/zsh $USER`,
-          'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
-        ],
-      },
-    ],
-  },
-  {
-    category: 'desktop',
-    title: 'X11 - only the essential part',
-    substeps: [
-      {
-        apps: ['xorg'],
       },
     ],
   },
@@ -457,13 +437,10 @@ const steps: Steps[] = [
   },
   {
     category: 'desktop',
-    title: 'terminal',
+    title: 'X11 - only the essential part',
     substeps: [
       {
-        apps: [
-          config.defaults.terminal,
-          //  'kitty'
-        ],
+        apps: ['xorg'],
       },
     ],
   },
@@ -477,6 +454,32 @@ const steps: Steps[] = [
       },
     ]
   },
+  {
+    category: 'desktop',
+    title: 'terminal',
+    substeps: [
+      {
+        apps: [
+          config.defaults.terminal,
+          //  'kitty'
+        ],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'setup zsh - esential part',
+    substeps: [
+      {
+        apps: ['zsh'],
+      },
+      {
+        cmd: [
+          `sudo chsh -s /bin/zsh $USER`,
+        ],
+      },
+    ],
+  },
   // make checkpoint-daemon and checkpoint-script
   {
     title: 'reboot into the 2nd half of installation',
@@ -488,18 +491,25 @@ const steps: Steps[] = [
           // mount /home from 2nd drive
           `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
 
+	  // TODO: enable autologin for the 2nd half of the installation to go without interruption
+	   
           // setting up checkpoint daemon
+	  mkdir -p .config/systemd/user
           `touch ${config.path.checkpointDaemon}`,
+
           `echo "[Unit]" | tee -a ${config.path.checkpointDaemon}`,
-          `echo -e "Description=proceed 2nd half of post-installation" | tee -a ${config.path.checkpointDaemon}`,
-          `echo -e "" | tee -a ${config.path.checkpointDaemon}`,
-          `echo "[Install]" | tee -a ${config.path.checkpointDaemon}`,
-          `echo -e "WantedBy=multi-user.target" | tee -a ${config.path.checkpointDaemon}`,
-          `echo -e "" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "Description=Run Once After X11 Starts" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "After=network.target" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "" | tee -a ${config.path.checkpointDaemon}`,
           `echo "[Service]" | tee -a ${config.path.checkpointDaemon}`,
-          `echo "Type=oneshot" | tee -a ${config.path.checkpointDaemon}`,
           `echo "Environment=DISPLAY=:0" | tee -a ${config.path.checkpointDaemon}`,
-          `echo "ExecStart=/usr/bin/${config.defaults.terminal} --hold -e zsh -c '${config.path.checkpointScript}; zsh'" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "ExecStart=/usr/bin/bash .config/systemd/user/test.sh" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "Type=oneshot" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "RemainAfterExit=no" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "[Install]" | tee -a ${config.path.checkpointDaemon}`,
+          `echo "WantedBy=default.target" | tee -a ${config.path.checkpointDaemon}`,
+
           // enabling checkpoint daemon
           `systemctl --user enable ${config.path.checkpointDaemon}`,
 
@@ -507,7 +517,9 @@ const steps: Steps[] = [
           `touch ${config.path.checkpointScript}`,
           `echo "#!/bin/zsh\n" | tee -a ${config.path.checkpointScript}`,
           `echo "source /home/${config.username}/.zshrc;" | tee -a ${config.path.checkpointScript}`,
-          `echo "bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}" | tee -a ${config.path.checkpointScript}`,
+          `echo "startx&" | tee -a ${config.path.checkpointScript}`,
+          `echo "while ! pgrep -x i3 > /dev/null; do sleep 1; done;" | tee -a ${config.path.checkpointScript}`,
+          `echo "/usr/bin/alacritty --hold -e zsh -c 'bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}'" | tee -a ${config.path.checkpointScript}`,
 
           // reboot to continue the 2nd half wile the OS is useable
           `sudo reboot now`
@@ -543,6 +555,21 @@ const steps: Steps[] = [
   //! TODO: - so you have to test the apps one-by-one to konw which ones to be careful with
 
   // SECOND-ESSENTIALS
+  {
+    category: 'common',
+    title: 'setting up zsh - after essentials part',
+    substeps: [
+      {
+        apps: ['zsh-autosuggestions', 'zsh-syntax-highlighting'],
+      },
+      {
+        cmd: [
+          'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
+	  'source .zshrc'
+        ],
+      },
+    ],
+  },
   {
     category: 'desktop',
     title: 'desktop user interface UI - after the essentials',
@@ -738,7 +765,6 @@ const steps: Steps[] = [
         title: '',
         apps: ['code'],
       },
-      // todo: add cursor's appimage
       {
         enabled: false,
         title: 'installing zed',
