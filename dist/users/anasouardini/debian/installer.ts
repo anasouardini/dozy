@@ -642,7 +642,15 @@ const steps: Steps[] = [
     title: 'audio tools',
     substeps: [
       {
-        apps: ['pulseaudio', 'alsa-utils', 'pavucontrol'],
+        apps: [
+	  // 'pulseaudio', 
+	  // 'alsa-utils',
+          "pipewire",
+          "pipewire-alsa",
+          "pipewire-audio",
+          "pipewire-pulse",
+	  'pavucontrol'
+	],
       },
     ],
   },
