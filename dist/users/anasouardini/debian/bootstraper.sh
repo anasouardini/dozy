@@ -63,7 +63,7 @@ function prepareDesk() {
     exit 1
   fi
 
-  printGreen "Clearing partition table"
+  # printGreen "Clearing partition table"
   # no need, dd will take care off partition table and potential GPT parition
   # yes | sgdisk --zap-all "$chosenDevice"
 
@@ -116,11 +116,11 @@ function install(){
   printGreen "Installing kernel and grub packages"
   chroot $mountPath /bin/bash -c "apt install linux-image-amd64 firmware-linux-free grub2 -y"
 
-  printGreen "Installing grub"
+  printGreen "Setting up grub"
   chroot $mountPath /bin/bash -c "grub-install ${chosenDevice} && update-grub"
 
   # printGreen "Installing standard utils"
-  # chroot $mountPath /bin/bash -c "tasksel insatll standard"
+  chroot $mountPath /bin/bash -c "tasksel insatll standard"
 
   # literally repeating the password twice using echo :)
   printGreen "setting password for root"
