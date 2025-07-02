@@ -31,6 +31,7 @@ interface Config {
     log: string;
     checkpointDaemon: string;
     checkpointScript: string;
+    tty1ServiceConfig: string;
   };
   defaults: {
     template: 'desktop' | 'homeServer';
@@ -69,6 +70,7 @@ const config: Config = {
     log: ``,
     checkpointDaemon: '',
     checkpointScript: '',
+    tty1ServiceConfig: '/etc/systemd/system/getty@tty1.service.d/nologin.config';
   },
   defaults: {
     template: 'desktop',
@@ -490,8 +492,6 @@ const steps: Steps[] = [
         cmd: [
           // mount /home from 2nd drive
           `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
-
-	  // TODO: enable autologin for the 2nd half of the installation to go without interruption
 	   
           // setting up checkpoint daemon
 	  mkdir -p .config/systemd/user
@@ -520,6 +520,15 @@ const steps: Steps[] = [
           `echo "startx&" | tee -a ${config.path.checkpointScript}`,
           `echo "while ! pgrep -x i3 > /dev/null; do sleep 1; done;" | tee -a ${config.path.checkpointScript}`,
           `echo "/usr/bin/alacritty --hold -e zsh -c 'bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}'" | tee -a ${config.path.checkpointScript}`,
+          // `echo "sudo systemctl enable getty@tty1.service" | tee -a ${config.path.checkpointScript}`,
+          `echo "restoring login prompt, after 2nd half of post-installation is done" | tee -a ${config.path.checkpointScript}`,
+          `echo "sudo rm -rf \"${config.path.tty1ServiceConfig}\"" | tee -a ${config.path.checkpointScript}`,
+
+          // disable login prompt for the 2nd half of the installation to go without interruption
+	  // `sudo systemctl disable getty@tty1.service`,
+          `echo "[Service]" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
+          `echo "ExecStart=" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
+          `echo "ExecStart=-/sbin/agetty -o '-p -f -- \\u' --autologin ${config.username} --noclear %I $TERM" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
 
           // reboot to continue the 2nd half wile the OS is useable
           `sudo reboot now`
@@ -961,12 +970,12 @@ const steps: Steps[] = [
           'bc',
           'tree',
           // 'trash-cli',
-          'rename',
-          'whois',
+          // 'rename',
+          // 'whois',
           'fzf',
           'pkexec', // balena etcher needs this
           'preload', // for preloading frequently used apps in memory
-          'picom', // for windows transparency
+          // 'picom', // for windows transparency
         ],
       },
     ],
