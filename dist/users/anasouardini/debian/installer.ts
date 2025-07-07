@@ -519,6 +519,8 @@ const steps: Steps[] = [
           `echo "source /home/${config.username}/.zshrc;" | tee -a ${config.path.checkpointScript}`,
           `echo "startx&" | tee -a ${config.path.checkpointScript}`,
           `echo "while ! pgrep -x i3 > /dev/null; do sleep 1; done;" | tee -a ${config.path.checkpointScript}`,
+          // empty terminal. At first boot, there are no keybindings
+          `echo "/usr/bin/alacritty&\n" | tee -a ${config.path.checkpointScript}`,
           `echo "/usr/bin/alacritty --hold -e zsh -c 'bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}'" | tee -a ${config.path.checkpointScript}`,
           // `echo "sudo systemctl enable getty@tty1.service" | tee -a ${config.path.checkpointScript}`,
           `echo "restoring login prompt, after 2nd half of post-installation is done" | tee -a ${config.path.checkpointScript}`,
