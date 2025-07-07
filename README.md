@@ -50,14 +50,13 @@ bash <(curl -sfSL "https://dozy.netlify.app/users/sample/arch/install.sh")
 │   │   ├── install.sh
 │   │   ├── user_configuration.json
 │   │   └── user_credentials.json
-│   ├── debian
-│   │   ├── bootstraper.sh
-│   │   ├── ideas.md
-│   │   ├── installer.ts
-│   │   ├── install.sh
-│   │   ├── preseed.cfg
-│   │   └── qemu.cfg
-│   └── nixos
+│   └── debian
+│       ├── bootstraper.sh
+│       ├── ideas.md
+│       ├── installer.ts
+│       ├── install.sh
+│       ├── preseed.cfg
+│       └── qemu.cfg
 └── sample
     ├── arch
     │   ├── install.sh
