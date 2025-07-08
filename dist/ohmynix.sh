@@ -1,0 +1,1 @@
+/media/D/data/scripts/oh-my-nix/install.sh
