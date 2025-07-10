@@ -34,26 +34,24 @@ fi
 cd $(dirname $0)
 
 function prepareDesk() {
-  printGreen "Pick a usb device:"
-  lsblk -dno name,size,type,mountpoint | awk '{print NR, ") ", $0}'
+  printGreen "\nPick a device:"
+  # lsblk -no name,label,size,serial,model | awk '{print NR, ") ", $0}'
+  lsblk -no name,label,size,serial,model
 
   echo ""
-  read -p 'Device number: ' deviceNumber
-
-  chosenDevice=$(lsblk -dno name,size,type,mountpoint | sed -n ${deviceNumber}p | awk '{print "/dev/" $1}')
-
-  echo ""
-  printGreen "Are you sure you want to format the device ${chosenDevice}? (y/N)"
-  read -p "[n] : " isContinue
-  if [[ ! $isContinue = "y" ]]; then
+  read -p 'Enter Device Name: /dev/' deviceName
+  # chosenDevice=$(lsblk -dno name,label,size,serial,model | sed -n ${deviceName}p | awk '{print "/dev/" $1}')
+  chosenDevice=$(lsblk -dno name,label,size,serial,model | grep ${deviceName} | awk '{print "/dev/" $1}')
+  if [[ -z $chosenDevice ]]; then
+    printRed "The name you've entered doesn't exist"
     exit 0
   fi
 
-  # TODO: check where it's mounted, if to the desired path, leave it, if not unmount it
-  mountedDev=$(mount | grep $chosenDevice)
-  if [[ -n $mountedDev ]]; then
-    printGreen "${chosenDevice} is already mounted; unmount it first"
-    exit 1
+  echo ""
+  echo "Are you sure you want to format the device ${chosenDevice}? (y/N)"
+  read -p "[n] : " isContinue
+  if [[ ! $isContinue = "y" ]]; then
+    exit 0
   fi
 
   # TODO: make sure it's the chosen device that is mounted and then leave it mounted
