@@ -388,7 +388,7 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/sleep, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
         ],
       },
     ],
@@ -428,9 +428,10 @@ const steps: Steps[] = [
   },
   {
     category: 'common',
-    title: 'reduce grub timeout',
+    title: 'configure grub',
     substeps: [
       {
+        title: 'reduce grub timeout',
         cmd: [
           `sudo sed 's|^GRUB_TIMEOUT=[0-9]\+$|GRUB_TIMEOUT=1|' -i /etc/default/grub`,
         ]
@@ -478,6 +479,31 @@ const steps: Steps[] = [
       {
         cmd: [
           `sudo chsh -s /bin/zsh $USER`,
+        ],
+      },
+    ],
+  },
+  {
+    category: 'common',
+    title: 'setup swap file',
+    substeps: [
+      {
+        cmd: [
+          'sudo swapoff -a',
+          'sudo touch /swapfile',
+          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=8000',
+          'sudo chmod 600 /swapfile',
+          'sudo mkswap /swapfile',
+          'sudo swapon /swapfile',
+          'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
+          'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
+          'sudo findmnt --verify --verbose',
+          // setup hibernation resume point
+          `rootUUID=$(findmnt -no UUID -T /)
+           swapOffset=$(sudo filefrag -v /swapfile | grep "  0:" | awk '{print $4}' | sed 's/\..*//')
+           echo 'GRUB_CMDLINE_LINUX_DEFAULT="resume=UUID='$rootUUID' resume_offset='$swapOffset'"' | sudo tee -a /etc/default/grub`,
+          `sudo update-grub`,
+          `sudo update-initramfs -u`,
         ],
       },
     ],
@@ -798,25 +824,6 @@ const steps: Steps[] = [
       {
         title: 'a password prompt for privs escalation (for GUI apps)',
         apps: ['policykit-1-gnome', 'pinentry-qt'],
-      },
-    ],
-  },
-  {
-    category: 'common',
-    title: 'setup swap file',
-    substeps: [
-      {
-        cmd: [
-          'sudo swapoff -a',
-          'sudo touch /swapfile',
-          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=8000',
-          'sudo chmod 600 /swapfile',
-          'sudo mkswap /swapfile',
-          'sudo swapon /swapfile',
-          'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
-          'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
-          'sudo findmnt --verify --verbose',
-        ],
       },
     ],
   },
