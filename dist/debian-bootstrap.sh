@@ -10,6 +10,12 @@ printRed() {
   printf '\033[1;31m> %s\033[0m\n' "$@" >&2 # bold Red
 }
 
+## only run as 'root'
+if [[ ! $(whoami) = 'root' ]]; then
+  printRed "Err -> you have to run the script as root"
+  exit 1
+fi
+
 ## vars
 mountPath="/mnt/debootstrap-target"
 mkdir -p $mountPath;
@@ -17,18 +23,11 @@ mirror="http://ftp.es.debian.org/debian/"
 distribution="bookworm"
 arch="amd64"
 partTableType="msdos"
-cachePath="/home/venego/.debootstrap-cache"
+cachePath="$HOME/.debootstrap-cache"
 mkdir -p $cachePath;
 rootPassword="root"
 defaultUsername="venego"
 defaultUserpass="venego"
-
-
-## only run as 'root'
-if [[ ! $(whoami) = 'root' ]]; then
-  printRed "Err -> you have to run the script as root"
-  exit 1
-fi
 
 ## unnecessary
 cd $(dirname $0)
