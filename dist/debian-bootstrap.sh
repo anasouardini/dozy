@@ -29,9 +29,6 @@ rootPassword="root"
 defaultUsername="venego"
 defaultUserpass="venego"
 
-## unnecessary
-cd $(dirname $0)
-
 function prepareDesk() {
   printGreen "\nPick a device:"
   # lsblk -no name,label,size,serial,model | awk '{print NR, ") ", $0}'
