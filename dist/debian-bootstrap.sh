@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # TODO: device and post-installation script could be provided as arguments.
 
@@ -8,6 +9,15 @@ printGreen() {
 }
 printRed() {
   printf '\033[1;31m> %s\033[0m\n' "$@" >&2 # bold Red
+}
+function installIfDoesNotExist(){
+  for package in "$@"; do
+    command -v "$package" > /dev/null 2>&1;
+    if [ ! $? -eq 0 ]; then
+      echo "- installing ${package}...";
+      sudo apt install $package -y
+    fi
+  done
 }
 
 ## only run as 'root'
@@ -39,7 +49,7 @@ function prepareDesk() {
   # chosenDevice=$(lsblk -dno name,label,size,serial,model | sed -n ${deviceName}p | awk '{print "/dev/" $1}')
   chosenDevice=$(lsblk -dno name,label,size,serial,model | grep ${deviceName} | awk '{print "/dev/" $1}')
   if [[ -z $chosenDevice ]]; then
-    printRed "The name you've entered doesn't exist"
+    printRed "The device name '${deviceName}' you've entered doesn't exist"
     exit 0
   fi
 
@@ -51,9 +61,11 @@ function prepareDesk() {
   fi
 
   # TODO: make sure it's the chosen device that is mounted and then leave it mounted
-  mountedPath=$(mount | grep $mountPath)
-  if [[ -n $mountedPath ]]; then
-    printGreen "${mountPath} is being used to mount some device; unmount it first"
+  mountedPath=$(mount | grep $mountPath || echo 0)
+  if [[ $mountedPath == 0 ]]; then
+    printGreen "${mountPath} is not being used, good"
+  else
+    printRed "${mountPath} is being used to mount some device; unmount it first"
     exit 1
   fi
 
@@ -63,10 +75,13 @@ function prepareDesk() {
 
   printGreen "removing potential old GPT label; grub2 is stupid"
   # parted "$chosenDevice" --script mkpart primary ext4 0MB 1MB
-  dd if=/dev/zero of=$chosenDevice bs=1M count=2
+  dd if=/dev/zero of=$chosenDevice bs=2M count=2
   # parted "$chosenDevice" --script rm 2
 
   printGreen "Partitioning and formatting"
+  # Install parted if it's not already installed
+  installIfDoesNotExist parted;
+
   parted "$chosenDevice" --script mklabel "$partTableType"
   parted "$chosenDevice" --script mkpart primary ext4 1MB 100%
   parted "$chosenDevice" --script set 1 boot on
@@ -80,20 +95,10 @@ function prepareDesk() {
 
 function install(){
   # Install debootstrap if it's not already installed
-  which debootstrap
-  if [[ $? != 0 ]]; then
-    echo "debootstrap not found. Installing..."
-    apt-get update -y
-    apt-get install debootstrap -y
-  fi
+  installIfDoesNotExist debootstrap;
 
   # Install parted if it's not already installed
-  which parted
-  if [[ $? != 0 ]]; then
-    echo "parted not found. Installing..."
-    apt-get update -y
-    apt-get install parted -y
-  fi
+  installIfDoesNotExist parted;
 
   printGreen "debootstraping..."
   debootstrap --cache-dir="$cachePath" --arch="$arch" "$distribution" "$mountPath" "$mirror"
