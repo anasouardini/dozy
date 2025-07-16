@@ -1,7 +1,5 @@
 #!/bin/bash
 
-# TODO: device and post-installation script could be provided as arguments.
-
 ## tools
 printGreen() {
   printf '\033[1;32m> %s\033[0m\n' "$@" >&2 # bold Green
@@ -92,7 +90,6 @@ function prepareDesk() {
   mount "${chosenDevice}1" $mountPath
 }
 
-
 function install(){
   # Install debootstrap if it's not already installed
   installIfDoesNotExist debootstrap;
@@ -110,25 +107,36 @@ function install(){
   mount --make-rslave --rbind /sys $mountPath/sys
   mount --make-rslave --rbind /run $mountPath/run
 
-  printGreen "--------- Installing kernel, grub and essential apps to ${mountPath}"
-
+  printGreen "Generating /etc/fstab"
+  cat <<EOF > $mountPath/etc/fstab
+# <file system> <mount point> <type> <options>                  <dump> <pass>
+LABEL=ROOT      /             ext4   defaults,errors=remount-ro 0      1
+EOF
   printGreen "Installing kernel and grub packages"
   chroot $mountPath /bin/bash -c "apt install linux-image-amd64 firmware-linux-free grub2 -y"
 
   printGreen "Setting up grub"
   chroot $mountPath /bin/bash -c "grub-install ${chosenDevice} && update-grub"
 
-  # printGreen "Installing standard utils"
-  chroot $mountPath /bin/bash -c "tasksel insatll standard"
+  printGreen "Installing essential system needs"
+  chroot $mountPath /bin/bash -c "apt install --no-install-recommends systemd dbus network-manager sudo -y"
+  printGreen "Installing basic system needs (standard utils)"
+  chroot $mountPath /bin/bash -c "tasksel install standard"
 
   # literally repeating the password twice using echo :)
   printGreen "setting password for root"
   chroot $mountPath /bin/bash -c "printf '${rootPassword}\n${rootPassword}\n' | passwd root"
 
-  # adding a normal user with 'sudo' group
+  printGreen "adding a normal user with 'sudo' group"
   chroot $mountPath /bin/bash -c "apt install sudo -y"
-  chroot $mountPath /bin/bash -c "printf "${defaultUserpass}\n${defaultUserpass}\n\n\n\n\n\n\n" | adduser ${defaultUsername}"
+  # chroot $mountPath /bin/bash -c "printf "${defaultUserpass}\n${defaultUserpass}\n\n\n\n\n\n\n" | adduser ${defaultUsername}" # adduser is not stable enough for automation
+  chroot $mountPath /bin/bash -c "useradd -m -d /home/$defaultUsername -s /bin/bash $defaultUsername"
+  # chroot $mountPath /bin/bash -c "echo \"$defaultUsername:$defaultUserpass\" | chpasswd" # idk why this doesn't work
+  chroot $mountPath /bin/bash -c "printf '${defaultUserpass}\n${defaultUserpass}\n' | passwd ${defaultUsername}"
   chroot $mountPath /bin/bash -c "usermod -aG sudo ${defaultUsername}"
+
+  printGreen "setting up hostname"
+  echo "debian" > $mountPath/etc/hostname
 
   printGreen "Unounting ${chosenDevice}"
   umount -R $mountPath
