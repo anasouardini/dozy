@@ -12,8 +12,8 @@ printRed() {
 function installIfDoesNotExist(){
   for package in "$@"; do
     command -v "$package" > /dev/null 2>&1;
-    commandistatus = $(command -v "$package" || 0)
-    if [ $commandistatus == 0 ]; then
+    commandistatus=$(command -v "$package" || echo 0)
+    if [[ $commandistatus == 0 ]]; then
       echo "- installing ${package}...";
       sudo apt install $package -y
     fi
