@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 # TODO: device and post-installation script could be provided as arguments.
 
@@ -10,6 +11,12 @@ printRed() {
   printf '\033[1;31m> %s\033[0m\n' "$@" >&2 # bold Red
 }
 
+## only run as 'root'
+if [[ ! $(whoami) = 'root' ]]; then
+  printRed "Err -> you have to run the script as root"
+  exit 1
+fi
+
 ## vars
 mountPath="/mnt/debootstrap-target"
 mkdir -p $mountPath;
@@ -17,21 +24,11 @@ mirror="http://ftp.es.debian.org/debian/"
 distribution="bookworm"
 arch="amd64"
 partTableType="msdos"
-cachePath="/home/venego/.debootstrap-cache"
+cachePath="$HOME/.debootstrap-cache"
 mkdir -p $cachePath;
 rootPassword="root"
 defaultUsername="venego"
 defaultUserpass="venego"
-
-
-## only run as 'root'
-if [[ ! $(whoami) = 'root' ]]; then
-  printRed "Err -> you have to run the script as root"
-  exit 1
-fi
-
-## unnecessary
-cd $(dirname $0)
 
 function prepareDesk() {
   printGreen "\nPick a device:"
@@ -43,7 +40,7 @@ function prepareDesk() {
   # chosenDevice=$(lsblk -dno name,label,size,serial,model | sed -n ${deviceName}p | awk '{print "/dev/" $1}')
   chosenDevice=$(lsblk -dno name,label,size,serial,model | grep ${deviceName} | awk '{print "/dev/" $1}')
   if [[ -z $chosenDevice ]]; then
-    printRed "The name you've entered doesn't exist"
+    printRed "The device name '${deviceName}' you've entered doesn't exist"
     exit 0
   fi
 
@@ -55,9 +52,11 @@ function prepareDesk() {
   fi
 
   # TODO: make sure it's the chosen device that is mounted and then leave it mounted
-  mountedPath=$(mount | grep $mountPath)
-  if [[ -n $mountedPath ]]; then
-    printGreen "${mountPath} is being used to mount some device; unmount it first"
+  mountedPath=$(mount | grep $mountPath || echo 0)
+  if [[ $mountedPath == 0 ]]; then
+    printGreen "${mountPath} is not being used, good"
+  else
+    printRed "${mountPath} is being used to mount some device; unmount it first"
     exit 1
   fi
 
@@ -133,6 +132,12 @@ function install(){
   umount -R $mountPath
 }
 
+function postInstallDaemon(){
+  # TODO:
+  # setup a systemd unit for running post-installation script on startup
+  # configure auto login
+}
+
 function testing(){
   printGreen "Booting ${chosenDevice} in Qemu"
   apt-get install qemu-system-x86_64 -y
@@ -144,4 +149,5 @@ function testing(){
 
 prepareDesk
 install
+postInstallDaemon
 # testing

@@ -32,6 +32,7 @@ interface Config {
     checkpointDaemon: string;
     checkpointScript: string;
     tty1ServiceConfig: string;
+    tty1ServiceConfigDir: string;
   };
   defaults: {
     template: 'desktop' | 'homeServer';
@@ -71,6 +72,7 @@ const config: Config = {
     checkpointDaemon: '',
     checkpointScript: '',
     tty1ServiceConfig: '/etc/systemd/system/getty@tty1.service.d/nologin.config';
+    tty1ServiceConfigiDir: '/etc/systemd/system/getty@tty1.service.d';
   },
   defaults: {
     template: 'desktop',
@@ -388,7 +390,10 @@ const steps: Steps[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/sleep, /usr/bin/chvt" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/systemctl suspend, /usr/sbin/rtcwake, /usr/bin/sleep, /usr/bin/chvt, /usr/bin/pkill" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl start mysql" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/airmon-ng, /sbin/aireplay-ng, /sbin/airodump-ng" | sudo tee -a /etc/sudoers;',
+          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/macchanger, /usr/sbin/ifconfig, /usr/sbin/arp-scan" | sudo tee -a /etc/sudoers;',
         ],
       },
     ],
@@ -498,7 +503,7 @@ const steps: Steps[] = [
           'echo "/swapfile swap    swap    0   0" | sudo tee -a /etc/fstab',
           'echo "vm.swappiness = 10" | sudo tee -a /etc/sysctl.conf',
           'sudo findmnt --verify --verbose',
-          // setup hibernation resume point
+          // setup hibernation/suspend resume point
           `rootUUID=$(findmnt -no UUID -T /)
            swapOffset=$(sudo filefrag -v /swapfile | grep "  0:" | awk '{print $4}' | sed 's/\..*//')
            echo 'GRUB_CMDLINE_LINUX_DEFAULT="resume=UUID='$rootUUID' resume_offset='$swapOffset'"' | sudo tee -a /etc/default/grub`,
@@ -518,7 +523,14 @@ const steps: Steps[] = [
         cmd: [
           // mount /home from 2nd drive
           `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
-	   
+
+          // disable login prompt for the 2nd half of the installation to go without interruption
+	  // `sudo systemctl disable getty@tty1.service`,
+          `sudo mkdir ${config.path.tty1ServiceConfigDir}`,
+          `echo "[Service]" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
+          `echo "ExecStart=" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
+          `echo "ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --autologin ${config.username} --noclear %I $TERM" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
+
           // setting up checkpoint daemon
 	  mkdir -p .config/systemd/user
           `touch ${config.path.checkpointDaemon}`,
@@ -551,12 +563,6 @@ const steps: Steps[] = [
           // `echo "sudo systemctl enable getty@tty1.service" | tee -a ${config.path.checkpointScript}`,
           `echo "restoring login prompt, after 2nd half of post-installation is done" | tee -a ${config.path.checkpointScript}`,
           `echo "sudo rm -rf \"${config.path.tty1ServiceConfig}\"" | tee -a ${config.path.checkpointScript}`,
-
-          // disable login prompt for the 2nd half of the installation to go without interruption
-	  // `sudo systemctl disable getty@tty1.service`,
-          `echo "[Service]" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
-          `echo "ExecStart=" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
-          `echo "ExecStart=-/sbin/agetty -o '-p -f -- \\u' --autologin ${config.username} --noclear %I $TERM" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
 
           // reboot to continue the 2nd half wile the OS is useable
           `sudo reboot now`
@@ -649,6 +655,7 @@ const steps: Steps[] = [
         ],
       },
       {
+        enabled: false,
         title: 'installing keyboard key mapper (kmonad)',
         cmd: [
           `
@@ -668,7 +675,17 @@ const steps: Steps[] = [
           git clone https://github.com/kmonad/kmonad.git
           cd kmonad
           stack setup; stack build; stack install;
-          echo "$USER ALL=(ALL:ALL) NOPASSWD: /home/$USER/.local/bin/kmonad" | sudo tee -a /etc/sudoers;
+	  sudo cp /home/$USER/.local/bin/kmonad /usr/bin/kmonad
+          echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/kmonad" | sudo tee -a /etc/sudoers;
+          `,
+        ],
+      },
+      {
+        title: 'installing keyboard key mapper (kanata)',
+        cmd: [
+          `
+          sudo cp $HOME/home/bin/kanata-cmd-allowed /usr/bin/
+          echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/kanata, /usr/bin/kanata-cmd-allowed" | sudo tee -a /etc/sudoers;
           `,
         ],
       },
@@ -1767,6 +1784,11 @@ await main();
 // -----------------------------------------------
 // --------------------- TODO --------------------
 // -----------------------------------------------
+
+// add fix for random wifi interface naming
+// echo 'GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"' | sudo tee -a /etc/default/grub
+// sudo update-grub
+// echo "reboot and you're good to go"
 
 // Enhancement
 // [X] reduce steps in 1st stage (before reboot)
