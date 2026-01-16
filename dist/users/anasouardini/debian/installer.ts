@@ -1,3 +1,67 @@
+/**
+ * This script is not a simple "use-once" post-installation script, it has some cool features for easy debuging and modifing down the road.
+ * Feature include:
+ *   - organized:
+ *     - the installation is split into steps and substeps
+ *     - e.g.: install package A, enable its daemon, copy its configs and insert its
+ *             bash aliases, all under the same step. So, in the future, you simply disable 
+ *             or remove that entire inter-dependent spagetty in one go with no residuals
+ *     - lets you add profiles/categories so you can use the same script for all of your machines
+ *   - future-proof:
+ *     - it makes sure each step has its dependency-steps defined to protect against future modifications
+ *     - TODO: detects modification of each step to notify you of updating steps dependent on it
+ *   - non-blocking
+ *     - it lets you use your Desktop ASAP before it continues the installtion after booting
+ *       the rest of the installation is going to be done in a GUI terminal unless choosen otherwise
+ *   - easily-debuggable:
+ *     - keeps log of every errored step
+ *     - lets you add a check-command for each command for better failure detection
+ *     - TODO: stops steps from running if the dependencies of which have failed
+ *     - TODO: lets you replay failing steps or any step by its ID
+ */
+
+// -----------------------------------------------
+// --------------------- TODO --------------------
+// -----------------------------------------------
+
+// add fix for random wifi interface naming
+// echo 'GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"' | sudo tee -a /etc/default/grub
+// sudo update-grub
+// echo "reboot and you're good to go"
+
+// Enhancement
+// [X] reduce steps in 1st stage (before reboot)
+// [ ] the logic of the 2 phases should be abstracted from steps
+//   - the steps should only contain hints about phase order and reboot.
+//     runSteps() should see the reboot hint and plant a hook (systemd daemon)
+//     to continue from where it was left off after boot
+// [ ] add a notification system so you can inform the user
+//   - when important steps are done
+
+// FEAT
+// [X] specify whether a step is a dependency for another
+//   [ ] use the feature on all steps that need it
+// [X] checkCmd for failing steps
+//   [ ] use checkCmd to add failure check logic for all steps (really hard)
+// [ ] don't run the step which its depenency was not successful.
+// [ ] remind the user to check dependent steps if their dependency has been changed
+//   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
+
+// FIX
+// [X] the install.sh script is not working correctly
+// [X] make sure the script is run as normal user
+
+// UX
+// [ ] add undo function for each step.
+// [ ] interactive configuration
+
+// DEBUGGING
+// [ ] option to go through each step and prompt for "yes/no"
+// [ ] option to run a step/sub-step by providing its order value in args
+// [ ] add "fix mode": go over the unsuccessful steps
+// [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
+// [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
+
 import fs from 'node:fs';
 import util from 'node:util';
 
@@ -46,7 +110,8 @@ interface Config {
     }
   };
   installCommandPrefix: string;
-  failedCmds: { subStepID: string | undefined, cmd: string }[]
+  failedCmds: Record<string, string>; // {"substepID": "Failing Command"}
+  failedCheckCmds: Record<string, string>; // {"substepID": "Failing Check Command"}
 }
 const config: Config = {
   username: 'venego',
@@ -89,7 +154,8 @@ const config: Config = {
     }
   },
   installCommandPrefix: "sudo apt-get install -y",
-  failedCmds: []
+  failedCmds: {},
+  failedCheckCmds: {},
 };
 config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 config.path.log = `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`;
@@ -286,6 +352,13 @@ const loadEnv = () => {
   return env;
 };
 
+function getUnifiedArray(itemOrArray: any | any[]) {
+  if (Array.isArray(itemOrArray)) {
+    return itemOrArray;
+  }
+  return [itemOrArray]
+}
+
 // ------------------------------------------------------------------
 // ----------------------------- STEPS ------------------------------
 // ------------------------------------------------------------------
@@ -302,9 +375,9 @@ type Step = {
     id?: string;
     dependsOn?: string | string[];
     title?: string;
-    cmd?: string[];
-    apps?: string[];
-    checkCmd?: string[]
+    cmd?: string | string[];
+    apps?: string | string[];
+    checkCmd?: string | string[]
   }[];
 };
 
@@ -1419,6 +1492,17 @@ function validateSteps(): { status: true } | { status: false, error: any } {
   function recurse(steps: (Step)[]) {
     steps.forEach((step) => {
 
+      if (!step.id) {
+        if (step.dependsOn) {
+          throw Error(`A dependent step on step with an ID=${step.dependsOn} has no ID!}`);
+        }
+
+        // if it's a substep(has a .cmd) that has a 'checkCmd' property
+        if (step.cmd && step.checkCmd) {
+          throw Error(`A substep with a 'checkCmd' property should have an ID\nHere is its cmd contents: ${JSON.stringify(step.cmd)}`)
+        }
+      }
+
       if (step.id) {
         if (IDList.includes(step.id)) { throw Error(`Duplicate step ID found '${step.id}'`) }
         IDList.push(step.id);
@@ -1430,20 +1514,8 @@ function validateSteps(): { status: true } | { status: false, error: any } {
       }
 
       if (step.dependsOn) {
-        if (!step.id) {
-          throw Error(`A dependent step on step of ID=${step.dependsOn} has no ID!}`);
-        }
-
-        // unify data-type of dependencies
-        let stepDependenciesIDs: string[] = [];
-        if (Array.isArray(step.dependsOn)) {
-          stepDependenciesIDs = step.dependsOn;
-        } else {
-          stepDependenciesIDs.push(step.dependsOn);
-        }
-
         // fill unmet dependencies
-        stepDependenciesIDs.forEach((dependencyID) => {
+        getUnifiedArray(step.dependsOn).forEach((dependencyID) => {
           if (!IDList.includes(dependencyID)) {
             //@ts-ignore
             tmpUnmetDependencies[dependencyID] = [step.id];
@@ -1494,6 +1566,21 @@ function listApps() {
   console.log(appsListOutput)
 }
 
+function isDependencyFailure(step: Step | Step["substeps"][0]) {
+  // check for failing subStep's dependency-step(s)
+  if (step.dependsOn) {
+    const dependenciesIDs = getUnifiedArray(step.dependsOn);
+    const isDependencyFailed = dependenciesIDs.some((dependencyID: string) => {
+      return [
+        Object.keys(config.failedCmds).includes(dependencyID),
+        Object.keys(config.failedCheckCmds).includes(dependencyID),
+      ].some((i) => i)
+    })
+    if (isDependencyFailed) return true;
+  }
+  return false;
+}
+
 interface RunStepsProps {
   offsetID: string | undefined;
   dryRun: boolean;
@@ -1531,6 +1618,11 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
       `================ ${stepIndex + 1} / ${stepsList.length} - ${step.category
       } - ${step.title ? step.title : 'untitled step'} =====================`,
     );
+
+    if (isDependencyFailure(step)) {
+      print.error(`[!] Skipping due to failure in its dependencies`);
+      print.error(`[!] dependencies: ${step.dependsOn}`);
+    }
     // print[step.enabled === false ? 'info': 'title']('==================================================================')
 
     const substepsList = step.substeps;
@@ -1542,11 +1634,31 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
       const substep = substepsList[substepIndex];
 
       if (substep.enabled === false) { continue; }
+      print.title(`${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? 'untitled substep'}`);
 
-      print.title(
-        `${substepIndex + 1} / ${substepsList.length} - ${substep.title ?? 'untitled substep'
-        }`,
-      );
+      if (isDependencyFailure(substep)) {
+        print.error(`[!] Skipping due to failure in its dependencies`);
+        print.error(`[!] dependencies: ${substep.dependsOn}`);
+      }
+
+      function commandWrapper(commandString: string, logCB: (err: unknown) => any) {
+        try {
+          command(commandString);
+          // check the result
+          if (substep.checkCmd) {
+            getUnifiedArray(substep.checkCmd).forEach((checkCmdLine) => {
+              try {
+                command(checkCmdLine)
+              } catch (err) {
+                config.failedCheckCmds[substep.id ?? `no-id_${Math.random()}`] = checkCmdLine;
+              }
+            })
+          }
+        } catch (err) {
+          config.failedCmds[substep.id ?? `no-id_${Math.random()}`] = commandString;
+          logCB(err);
+        }
+      }
 
       if (substep.apps) {
         for (let appIndex = 0; appIndex < substep.apps.length; appIndex++) {
@@ -1555,57 +1667,42 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
 
           print.title(`${appIndex + 1} / ${appsList.length} - [app] ${app}`);
           if (!dryRun) {
-            try {
-              command(`${config.installCommandPrefix} ${app}`);
-              // check the result
-              if (substep.checkCmd) {
-                let unifiedTypeCheckCmdList = [];
-                if (Array.isArray(substep.checkCmd)) { unifiedTypeCheckCmdList = substep.checkCmd }
-                else { unifiedTypeCheckCmdList.push(substep.checkCmd) }
-                substep.checkCmd.forEach((checkCmdLine) => {
-                  try {
-                    command(checkCmdLine)
-                  } catch (err) {
-                    config.failedCmds.push({
-                      subStepID: substep.id,
-                      cmd: checkCmdLine
-                    })
-                  }
-                })
+            const commandToRun = `${config.installCommandPrefix} ${app}`;
+            commandWrapper(
+              commandToRun,
+              (err) => {
+                log({
+                  orderStr: `${appIndex + 1} / ${appsList.length}`,
+                  title: `[app] ${app}`,
+                  msg: `${err}`,
+                });
               }
-            } catch (err) {
-              log({
-                orderStr: `${appIndex + 1} / ${appsList.length}`,
-                title: `[app] ${app}`,
-                msg: `${err}`,
-              });
-            }
+            );
           }
         }
       }
 
       if (substep.cmd) {
-        const cmdList = substep.cmd;
-        if (!dryRun && Array.isArray(cmdList)) {
+        const cmdList = getUnifiedArray(substep.cmd);
+        if (!dryRun) {
           for (let cmdIndex = 0; cmdIndex < cmdList.length; cmdIndex++) {
             const cmd = cmdList[cmdIndex];
-
-            try {
-              print.title(
-                `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
-                  0,
-                  21,
-                )}..."`,
-              );
-              command(cmd);
-            } catch (err) {
-              log({
-                orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length
-                  }.${substepsList.length}.${cmdList.length}`,
-                title: `running ${cmd}`,
-                msg: `${err}`,
-              });
-            }
+            print.title(
+              `${cmdIndex + 1} / ${cmdList.length} - [cmd] "${cmd.slice(
+                0,
+                21,
+              )}..."`,
+            );
+            commandWrapper(
+              cmd,
+              (err) => {
+                log({
+                  orderStr: `${stepIndex + 1}.${substepIndex + 1}.${cmdIndex + 1}/${stepsList.length}.${substepsList.length}.${cmdList.length}`,
+                  title: `running ${cmd}`,
+                  msg: `${err}`,
+                });
+              }
+            );
           }
         }
       }
@@ -1619,9 +1716,6 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
       print.title(`${index + 1}) ${step}`);
       return;
     }
-
-    //? maybe I'll add an array as a list of substeps
-    // step.forEach();
   });
 }
 
@@ -1819,7 +1913,7 @@ const main = async () => {
       print.info(`e.g: deno run --allow-all script-path dryRun`);
       print.info(`Options: ${Object.keys(defaultArgs).join(", ")}`);
 
-      process.exit(); // make sure to avoid running when "help" is requested
+      process.exit(); // avoid running steps when "help" is requested
     },
     run: async () => {
       if (args.check && !loadEnv().allSet) { return; }
@@ -1841,39 +1935,3 @@ const main = async () => {
 
 // ----------------- ENTRY POINT
 await main();
-
-// -----------------------------------------------
-// --------------------- TODO --------------------
-// -----------------------------------------------
-
-// add fix for random wifi interface naming
-// echo 'GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"' | sudo tee -a /etc/default/grub
-// sudo update-grub
-// echo "reboot and you're good to go"
-
-// Enhancement
-// [X] reduce steps in 1st stage (before reboot)
-// [ ] add a notification system so you can inform the user
-//   - when important steps are done
-
-// FEAT
-// [X] specify whether a step is a dependency for another
-// [ ] track failing steps (really hard)
-// [ ] don't run the step which its depenency was not successful.
-// [ ] remind the user to check dependent steps if their dependency has been changed
-//   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
-
-// FIX
-// [X] the install.sh script is not working correctly
-// [X] make sure the script is run as normal user
-
-// UX
-// [ ] add undo function for each step.
-// [ ] interactive configuration
-
-// DEBUGGING
-// [ ] option to go through each step and prompt for "yes/no"
-// [ ] option to run a step/sub-step by it's order
-// [ ] add "fix mode": go over the unsuccessful steps
-// [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
-// [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
