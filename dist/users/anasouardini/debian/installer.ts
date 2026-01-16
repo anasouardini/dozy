@@ -46,6 +46,7 @@ interface Config {
     }
   };
   installCommandPrefix: string;
+  failedCmds: { subStepID: string | undefined, cmd: string }[]
 }
 const config: Config = {
   username: 'venego',
@@ -71,8 +72,8 @@ const config: Config = {
     log: ``,
     checkpointDaemon: '',
     checkpointScript: '',
-    tty1ServiceConfig: '/etc/systemd/system/getty@tty1.service.d/nologin.config';
-    tty1ServiceConfigiDir: '/etc/systemd/system/getty@tty1.service.d';
+    tty1ServiceConfig: '/etc/systemd/system/getty@tty1.service.d/nologin.config',
+    tty1ServiceConfigDir: '/etc/systemd/system/getty@tty1.service.d',
   },
   defaults: {
     template: 'desktop',
@@ -87,7 +88,8 @@ const config: Config = {
       },
     }
   },
-  installCommandPrefix: "sudo apt-get install -y"
+  installCommandPrefix: "sudo apt-get install -y",
+  failedCmds: []
 };
 config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
 config.path.log = `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`;
@@ -176,8 +178,7 @@ const command = (cmd: string, printOutput: boolean = false) => {
         stderr.toLowerCase().includes(item.toLocaleLowerCase()),
       )
     ) {
-      console.log('IMPORTANT (I guess) => ' + stderr);
-      return;
+      throw Error(`============= Soft Error\n${stderr}`);
     }
 
     throw Error(stderr);
@@ -289,57 +290,63 @@ const loadEnv = () => {
 // ----------------------------- STEPS ------------------------------
 // ------------------------------------------------------------------
 
-type Category = 'common' | 'homeServer' | 'desktop' | 'termux' | 'arch' | 'bro' | 'myDrive';
-type Steps = {
-  title: string;
-  category: Category | Category[];
+type Category = 'absolute' | 'common' | 'homeServer' | 'desktop' | 'termux' | 'arch' | 'bro' | 'myDrive';
+type Step = {
   enabled?: boolean;
   id?: string;
-  dependsOn?: string[];
+  dependsOn?: string | string[];
+  title: string;
+  category: Category | Category[];
   substeps: {
+    enabled?: boolean;
+    id?: string;
+    dependsOn?: string | string[];
     title?: string;
     cmd?: string[];
     apps?: string[];
-    enabled?: boolean;
-    id?: string;
-    dependsOn?: string[];
+    checkCmd?: string[]
   }[];
 };
 
 // ======== STAGES: ==========
-// STAGE I: only really essential stesp for setting up a desktop are ran
+// STAGE I: only really essential and/or quick steps for setting up a desktop are ran
 //         - settings (time, permissions, restore /etc), xorg, i3, polybar, setup-fstab, terminal, zsh-config
-// STAGE II: the rest of the steps
-//         - make sure to inform the user when important stesp are done
-//         - e.g: browser, vscode, clockify, nodejs, tsx
-const steps: Steps[] = [
+//         - I get a minimal desktop with a terminal
+// STAGE II: the rest of the setup (browser, vscode, clockify, nodejs, tsx)
+//         - TODO: make sure to inform the user when important steps are done
+const steps: Step[] = [
   // first-essential
   {
-    title: `Checking if you are root (which you shouldn't be!)`,
-    category: 'common',
+    title: `Checking if it's ran as root (which it shouldn't be!)`,
+    category: 'absolute',
     substeps: [
       {
         cmd: [
           //? do not run as root
-	  `[[ $(whoami) == "root" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`,
-          //? you should have sudo installed
-	  `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
-	],
+          //? you should have sudo installed and add your user to 'sudo' group
+          `[[ $(whoami) == "root" ]] && pkill deno; pkill node; pkill bun`,
+          // `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
+        ],
       },
     ],
   },
   {
     category: 'common',
-    title: 'installing apt config dependencies',
+    id: "data-transfer",
+    title: 'installing data transfer tools',
     substeps: [
       {
+        id: "rsync",
         apps: ['rsync'],
+        checkCmd: [`which rsync`],
       },
     ],
   },
   {
+    id: "restore-apt-config",
     category: 'common',
-    title: 'restore config',
+    title: 'restore APT config',
+    dependsOn: "rsync",
     substeps: [
       {
         title: 'restore apt config',
@@ -419,7 +426,7 @@ const steps: Steps[] = [
       },
     ],
   },
-    {
+  {
     category: 'desktop',
     title: 'setting up fstab',
     substeps: [
@@ -525,14 +532,14 @@ const steps: Steps[] = [
           `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
 
           // disable login prompt for the 2nd half of the installation to go without interruption
-	  // `sudo systemctl disable getty@tty1.service`,
+          // `sudo systemctl disable getty@tty1.service`,
           `sudo mkdir ${config.path.tty1ServiceConfigDir}`,
           `echo "[Service]" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
           `echo "ExecStart=" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
           `echo "ExecStart=-/sbin/agetty -o '-p -f -- \\\\u' --autologin ${config.username} --noclear %I $TERM" | sudo tee -a "${config.path.tty1ServiceConfig}"`,
 
           // setting up checkpoint daemon
-	  mkdir -p .config/systemd/user
+          `mkdir - p.config / systemd / user`,
           `touch ${config.path.checkpointDaemon}`,
 
           `echo "[Unit]" | tee -a ${config.path.checkpointDaemon}`,
@@ -606,9 +613,12 @@ const steps: Steps[] = [
         apps: ['zsh-autosuggestions', 'zsh-syntax-highlighting'],
       },
       {
+        apps: ['curl', 'git'],
+      },
+      {
         cmd: [
           'zsh <(curl -s https://raw.githubusercontent.com/zap-zsh/zap/master/install.zsh) --branch release-v1',
-	  'source .zshrc'
+          'source .zshrc'
         ],
       },
     ],
@@ -631,19 +641,19 @@ const steps: Steps[] = [
       },
       {
         title: 'installing keyboard key mapper (keyd)',
-	enabled: false,
+        enabled: false,
         cmd: [
           `
           reposDIR="$HOME/repos"
-	  mkdir -p $reposDIR;
+      	  mkdir -p $reposDIR;
           DIR="$reposDIR/keyd"
           DATE=$(date +%F)
           if [ -d "$DIR" ]; then
-              NEW_DIR="${DIR}_$DATE"
+              NEW_DIR="$DIR""_""$DATE"
               mv "$DIR" "$NEW_DIR"
               echo "Directory renamed to: $NEW_DIR"
           fi
-	  cd $reposDIR; \\
+	        cd $reposDIR; \\
           git clone https://github.com/rvaiya/keyd; \\
           sudo apt-get install gcc make -y; \\
           cd keyd; \\
@@ -660,22 +670,22 @@ const steps: Steps[] = [
         cmd: [
           `
           reposDIR="$HOME/repos"
-	  mkdir -p $reposDIR;
+	        mkdir -p $reposDIR;
           DIR="$reposDIR/kmonad"
           DATE=$(date +%F)
           if [ -d "$DIR" ]; then
-              NEW_DIR="${DIR}_$DATE"
+              NEW_DIR="$DIR""_""$DATE"
               mv "$DIR" "$NEW_DIR"
               echo "Directory renamed to: $NEW_DIR"
           fi
-	  cd $reposDIR; \\
+	        cd $reposDIR; \\
           sudo apt update
           sudo apt install -y build-essential libev-dev libxcb-xkb-dev libx11-dev libxkbfile-dev libxrandr-dev libxinerama-dev libxfixes-dev
           curl -sSL https://get.haskellstack.org/ | sh
           git clone https://github.com/kmonad/kmonad.git
           cd kmonad
           stack setup; stack build; stack install;
-	  sudo cp /home/$USER/.local/bin/kmonad /usr/bin/kmonad
+	        sudo cp /home/$USER/.local/bin/kmonad /usr/bin/kmonad
           echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/kmonad" | sudo tee -a /etc/sudoers;
           `,
         ],
@@ -697,28 +707,27 @@ const steps: Steps[] = [
     substeps: [
       {
         apps: [
-	  // 'pulseaudio', 
-	  // 'alsa-utils',
+          // 'pulseaudio', 
+          // 'alsa-utils',
           "pipewire",
           "pipewire-alsa",
           "pipewire-audio",
           "pipewire-pulse",
-	  'pavucontrol'
-	],
+          'pavucontrol'
+        ],
       },
     ],
   },
   {
     category: 'common',
     title: 'package managers',
-    id: 'package_managers',
     substeps: [
       {
         apps: ['nala'],
       },
       {
-        title: "Installing and setting up flatpak",
         id: 'flatpak',
+        title: "Installing and setting up flatpak",
         apps: ['flatpak'],
         cmd: [
           // this needs password input, leave it within early steps
@@ -782,18 +791,18 @@ const steps: Steps[] = [
       {
         enabled: false, // mysql sux, doesn't suuport unattended installation
         title: 'installing MySQL',
-	cmd: [
-	  `sudo apt install mysql-server --mode unattended --mysqluser root --mysqlpassword root`,
-	  `sudo mysql -u root -p -e "CREATE USER 'venego'@'localhost' IDENTIFIED BY 'venego'"`,
-	  `sudo mysql -u root -p -e "GRANT ALL PRIVILEGES ON *.* TO 'venego'@'localhost' WITH GRANT OPTION"`
-	]
+        cmd: [
+          `sudo apt install mysql-server --mode unattended --mysqluser root --mysqlpassword root`,
+          `sudo mysql -u root -p -e "CREATE USER 'venego'@'localhost' IDENTIFIED BY 'venego'"`,
+          `sudo mysql -u root -p -e "GRANT ALL PRIVILEGES ON *.* TO 'venego'@'localhost' WITH GRANT OPTION"`
+        ]
       },
       {
         title: 'mysql DBs restore',
-	cmd: [
+        cmd: [
           'sudo mount --bind /media/D/bkp/bkpos/var/lib/mysql /var/lib/mysql',
           `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/mysql	/var/lib/mysql	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-	]
+        ]
       },
       {
         title: 'installing sqlite3',
@@ -857,6 +866,7 @@ const steps: Steps[] = [
           'xdotool',
           'xclip',
           'xbanish',
+          'vbetool', // controls display inside tty
         ],
       },
     ],
@@ -905,20 +915,21 @@ const steps: Steps[] = [
           // "xloadimage", // it has 'xsetbg': used for setting BG image
           // "imagemagick",
           "feh",
-	  'xzoom', // magnification tool
-	  // 'kmag', // magnification tool
+          'xzoom', // magnification tool
+          // 'kmag', // magnification tool
         ],
       },
       {
         enabled: false, // enable flatpak step if you want to use this.
-        title: 'installing media tools from flatpak',
+        title: 'installing media downloading tools from flatpak',
+        id: "media-downloaders",
         cmd: [
           // 'sudo apt-get install flatpak -y',
           // 'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
           'timeout 60 flatpak install flathub org.nickvision.tubeconverter',
           'timeout 60 flatpak install flathub org.localsend.localsend_app',
         ],
-        dependsOn: ['package-managers.flatpak'],
+        dependsOn: 'flatpak',
       },
       {
         enabled: false,
@@ -970,19 +981,19 @@ const steps: Steps[] = [
         ],
       },
       {
-	title: 'network monitoring'
-	apps: ['vnstat'],
-	cmd: [
+        title: 'network monitoring',
+        apps: ['vnstat'],
+        cmd: [
           'sudo mount --bind /media/D/bkp/bkpos/var/lib/vnstat /var/lib/vnstat',
           `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-	]
+        ]
       },
       {
-	title: 'setting dns'
-	cmd: [
+        title: 'setting dns',
+        cmd: [
           'echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf',
           `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
-	]
+        ]
       }
     ],
   },
@@ -1017,7 +1028,7 @@ const steps: Steps[] = [
            gcc git pkg-config meson ninja-build libsdl2-dev \
            libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
            libswresample-dev libusb-1.0-0 libusb-1.0-0-dev`,
-           `
+          `
 	   cd ~/home/repos;
 	   git clone https://github.com/Genymobile/scrcpy
            cd scrcpy
@@ -1031,25 +1042,22 @@ const steps: Steps[] = [
     category: 'common',
     title: 'bluetooth setup',
     substeps: [
-      /////////////////////////////////// bluetooth
-      //// these might be needed
-      // bluetooth gnome-bluetooth bluez bluez-tools pulseaudio-module-bluetooth
-      // blueman
-
-      //// these are the apparently required packages
-      // bluez bluez-tools pulseaudio-module-bluetooth pipewire pipewire-pulse
-
-      //// this fixes a very annoying bug
-      // systemctl --user --now enable pipewire pipewire-pulse
-
       {
         apps: [
-          'bluez',
-          'bluez-tools',
-          'pulseaudio-module-bluetooth',
+          'bluez',// gives "bluetooth" daemon and "bluetoothctl"
+          'bluez-tools', // CLI control/management tools
+          // 'pulseaudio-module-bluetooth', // pulseaudio adapter
           'pipewire',
+          // 'pipewire-media-session-alsa', // this is not needed
+          // 'libspa-0.2-bluetooth', // this is already installed with bluez or bluez-tools
           'pipewire-pulse',
+          // GUI interfaces
+          // 'bluetooth gnome-bluetooth',
+          // 'blueman',
         ],
+        cmd: [
+          `systemctl --user --now enable pipewire pipewire-pulse`
+        ]
       },
     ],
   },
@@ -1390,52 +1398,73 @@ const steps: Steps[] = [
     ],
   },
 ];
+// end of steps
 
 const manualSteps = [
   // 're-login for the default shell to be set', // we re-login automatically now
   'sudo apt install mysql-server -y',
-  'sudo apt-get install grub-imageboot-y; add rescue iso to /boot/images; sudo update-grub2;',
+  // 'sudo apt-get install grub-imageboot-y; add rescue iso to /boot/images; sudo update-grub2;',
 ];
 
 // --------------------------------------------------------------------
 // ------------------------- INSTALLATION RUN -------------------------
 // --------------------------------------------------------------------
 
-function validateStepsWIP() {
-  const unmetDependencies = {};
+function validateSteps(): { status: true } | { status: false, error: any } {
+  const IDList: string[] = [];
+  // {dependencyID: [dependentID, ...]}
+  const tmpUnmetDependencies: Record<string, string[]> = {};
 
-  steps.forEach((step, stepIndex) => {
-    if (!step.id) { console.log('skipping a step without an id'); return; }
+  // main logic
+  function recurse(steps: (Step)[]) {
+    steps.forEach((step) => {
 
-    // check if it's, itself, a dependency and remove it from the list if it is
-    Object.entries(unmetDependencies).forEach(([dependency, dependant]) => {
-      console.log(`found dependency ${dependency}`);
-      if (dependency.split('.')[0] == step?.id) {
-        if (!dependency.includes('.')) {
-          delete unmetDependencies[dependency];
+      if (step.id) {
+        if (IDList.includes(step.id)) { throw Error(`Duplicate step ID found '${step.id}'`) }
+        IDList.push(step.id);
+        // satisfy unmet dependencies if met
+        if (Object.keys(tmpUnmetDependencies).includes(step.id)) {
+          // dependency was unmet, now found
+          delete tmpUnmetDependencies[step.id];
         }
       }
-    })
 
-    // check deps for steps
-    if (step.dependsOn) { }
+      if (step.dependsOn) {
+        if (!step.id) {
+          throw Error(`A dependent step on step of ID=${step.dependsOn} has no ID!}`);
+        }
 
-    step.substeps.forEach((subStep) => {
+        // unify data-type of dependencies
+        let stepDependenciesIDs: string[] = [];
+        if (Array.isArray(step.dependsOn)) {
+          stepDependenciesIDs = step.dependsOn;
+        } else {
+          stepDependenciesIDs.push(step.dependsOn);
+        }
 
-      // dependency found
-      if (unmetDependencies.some((item) => item.dependency == dependency?.id)) {
-        return;
+        // fill unmet dependencies
+        stepDependenciesIDs.forEach((dependencyID) => {
+          if (!IDList.includes(dependencyID)) {
+            //@ts-ignore
+            tmpUnmetDependencies[dependencyID] = [step.id];
+          }
+        });
       }
 
-      // 
-      unmetDependencies.push({ dependency, dependant: step.id as string });
-    });
+      // tail recurse
+      // console.log("recursing")
+      recurse(step.substeps as Step[] ?? [] as Step[])
+    })
+  }
+  recurse(steps);
 
-    if (unmetDependencies.length) {
-      console.log(unmetDependencies);
-      throw Error(`Unmet Dependencies!`);
-    }
-  })
+  // Announce unmet dependencies
+  if (Object.keys(tmpUnmetDependencies).length) {
+    // console.log(tmpUnmetDependencies);
+    return { status: false, error: `[*] Unmet Dependencies:\n${JSON.stringify(tmpUnmetDependencies, null, 2)}` };
+  }
+
+  return { status: true };
 }
 
 function listApps() {
@@ -1528,6 +1557,22 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
           if (!dryRun) {
             try {
               command(`${config.installCommandPrefix} ${app}`);
+              // check the result
+              if (substep.checkCmd) {
+                let unifiedTypeCheckCmdList = [];
+                if (Array.isArray(substep.checkCmd)) { unifiedTypeCheckCmdList = substep.checkCmd }
+                else { unifiedTypeCheckCmdList.push(substep.checkCmd) }
+                substep.checkCmd.forEach((checkCmdLine) => {
+                  try {
+                    command(checkCmdLine)
+                  } catch (err) {
+                    config.failedCmds.push({
+                      subStepID: substep.id,
+                      cmd: checkCmdLine
+                    })
+                  }
+                })
+              }
             } catch (err) {
               log({
                 orderStr: `${appIndex + 1} / ${appsList.length}`,
@@ -1701,6 +1746,9 @@ function parseAdHocArgs() {
 }
 
 // modifies defaultArgs to store new args' values
+/**
+ * @description args example: CMD argument:value -arg:value -arg.
+ */
 function parseArgs() {
   // depending on whether you use nodejs or deno: in deno use 0, in nodejs use 2
   const argsStartIndex = 0;
@@ -1722,6 +1770,16 @@ function parseArgs() {
 }
 
 const main = async () => {
+  // validate steps
+  const stepValidationOutput = validateSteps();
+  if (!stepValidationOutput.status) {
+    console.error(`[!] Unmet Dependencies!`);
+    throw Error(`${stepValidationOutput.error}`);
+  }
+  console.log("[✅] all steps are valid")
+  // process.exit();//just in case
+
+  // apply CLI args/options
   const args = parseArgs();
   console.log(args);
 
@@ -1755,10 +1813,13 @@ const main = async () => {
       });
     },
     help: () => {
-      print.info(`all args are key-value pairs, if the value is true, you just type it without the ':'`);
+      print.info(`all args are key-value pairs (key:value), if the value is a boolean of true, you just type its key without the ':'`);
       print.info('Usage: deno run --allow-all script-path [...options]')
       print.info('e.g: deno run --allow-all script-path dryRun:true')
       print.info(`e.g: deno run --allow-all script-path dryRun`);
+      print.info(`Options: ${Object.keys(defaultArgs).join(", ")}`);
+
+      process.exit(); // make sure to avoid running when "help" is requested
     },
     run: async () => {
       if (args.check && !loadEnv().allSet) { return; }
@@ -1796,7 +1857,10 @@ await main();
 //   - when important steps are done
 
 // FEAT
-// [ ] specify whether a step is a dependency for another; don't run the step which its depenency was not successful.
+// [X] specify whether a step is a dependency for another
+// [ ] track failing steps (really hard)
+// [ ] don't run the step which its depenency was not successful.
+// [ ] remind the user to check dependent steps if their dependency has been changed
 //   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
 
 // FIX
@@ -1810,6 +1874,6 @@ await main();
 // DEBUGGING
 // [ ] option to go through each step and prompt for "yes/no"
 // [ ] option to run a step/sub-step by it's order
-// [ ] fix mode — go over the unsuccessful steps
+// [ ] add "fix mode": go over the unsuccessful steps
 // [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
 // [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
