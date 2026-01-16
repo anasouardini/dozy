@@ -43,6 +43,7 @@
 //   [ ] use the feature on all steps that need it
 // [X] checkCmd for failing steps
 //   [ ] use checkCmd to add failure check logic for all steps (really hard)
+// [ ] add undo function for each step.
 // [ ] don't run the step which its depenency was not successful.
 // [ ] remind the user to check dependent steps if their dependency has been changed
 //   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
@@ -52,8 +53,9 @@
 // [X] make sure the script is run as normal user
 
 // UX
-// [ ] add undo function for each step.
 // [ ] interactive configuration
+// [ ] open a tmux session with two panes: 1st for output of this script
+//     and 2nd with output from shell commands
 
 // DEBUGGING
 // [ ] option to go through each step and prompt for "yes/no"
@@ -91,6 +93,7 @@ interface Config {
     };
   };
   dryRun: boolean;
+  fakeRun: boolean;
   path: {
     log: string;
     checkpointDaemon: string;
@@ -133,6 +136,7 @@ const config: Config = {
     },
   },
   dryRun: false,
+  fakeRun: false,
   path: {
     log: ``,
     checkpointDaemon: '',
@@ -387,7 +391,7 @@ type Step = {
 //         - I get a minimal desktop with a terminal
 // STAGE II: the rest of the setup (browser, vscode, clockify, nodejs, tsx)
 //         - TODO: make sure to inform the user when important steps are done
-const steps: Step[] = [
+let steps: Step[] = [
   // first-essential
   {
     title: `Checking if it's ran as root (which it shouldn't be!)`,
@@ -1473,11 +1477,48 @@ const steps: Step[] = [
 ];
 // end of steps
 
-const manualSteps = [
+let manualSteps = [
   // 're-login for the default shell to be set', // we re-login automatically now
   'sudo apt install mysql-server -y',
   // 'sudo apt-get install grub-imageboot-y; add rescue iso to /boot/images; sudo update-grub2;',
 ];
+
+if (config.fakeRun) {
+  steps = [
+    {
+      title: `Checking if it's ran as root (which it shouldn't be!)`,
+      category: 'absolute',
+      substeps: [
+        {
+          cmd: [
+            //? do not run as root
+            //? you should have sudo installed and add your user to 'sudo' group
+            `[[ $(whoami) == "root" ]] && pkill deno; pkill node; pkill bun`,
+            // `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
+          ],
+        },
+      ],
+    },
+    {
+      title: `a failing step`,
+      category: 'common',
+      substeps: [
+        {
+          cmd: [
+            `notExistingCommand`,
+          ],
+        },
+      ],
+    },
+    // todo: mimick
+    // - [X] failing step (check if it's logged)
+    // - [ ] failing dependency step (check if their dependents cancelled)
+    // - [ ] failing cmd check, check if its dependent is cancelled
+    // - [ ] undo step (feature not implemented yet)
+    // - [ ] what else?
+  ];
+  manualSteps = [];
+}
 
 // --------------------------------------------------------------------
 // ------------------------- INSTALLATION RUN -------------------------
@@ -1489,7 +1530,7 @@ function validateSteps(): { status: true } | { status: false, error: any } {
   const tmpUnmetDependencies: Record<string, string[]> = {};
 
   // main logic
-  function recurse(steps: (Step)[]) {
+  function recurse(steps: (Step | Step["substeps"][0])[]) {
     steps.forEach((step) => {
 
       if (!step.id) {
@@ -1497,9 +1538,9 @@ function validateSteps(): { status: true } | { status: false, error: any } {
           throw Error(`A dependent step on step with an ID=${step.dependsOn} has no ID!}`);
         }
 
-        // if it's a substep(has a .cmd) that has a 'checkCmd' property
+        // if it's a substep(has a cmd property) and has a 'checkCmd' property
         if (step.cmd && step.checkCmd) {
-          throw Error(`A substep with a 'checkCmd' property should have an ID\nHere is its cmd contents: ${JSON.stringify(step.cmd)}`)
+          throw Error(`A substep with a 'checkCmd' property should have an ID\nHere's its cmd contents: ${JSON.stringify(step.cmd)}`)
         }
       }
 
@@ -1525,7 +1566,9 @@ function validateSteps(): { status: true } | { status: false, error: any } {
 
       // tail recurse
       // console.log("recursing")
-      recurse(step.substeps as Step[] ?? [] as Step[])
+      if (step.substeps) {
+        recurse(step.substeps)
+      }
     })
   }
   recurse(steps);
@@ -1726,6 +1769,7 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
 const argsShortHand = {
   h: 'help',
   d: 'dryRun',
+  f: 'fakeRun',
   l: 'list',
   a: 'listApps',
   s: 'listDisabledSteps',
@@ -1744,10 +1788,11 @@ type Args = {
   run: Arg<boolean>,
   check: Arg<boolean>,
   dryRun: Arg<boolean>,
+  fakeRun: Arg<boolean>,
   list: Arg<boolean>,
   listApps: Arg<boolean>,
   listDisabledSteps: Arg<boolean>,
-  offsetID: Arg<string | undefined>,
+  initialStepID: Arg<string | undefined>,
 };
 //! order matters
 const defaultArgs: Args = {
@@ -1768,6 +1813,10 @@ const defaultArgs: Args = {
     value: false,
     dependencyOf: ['run'],
   },
+  fakeRun: {
+    value: false,
+    dependencyOf: ['run'],
+  },
 
   list: {
     value: false,
@@ -1783,7 +1832,7 @@ const defaultArgs: Args = {
     dependencyOf: ['list'],
   },
 
-  offsetID: {
+  initialStepID: {
     value: undefined,
   },
 } as const;
@@ -1916,7 +1965,7 @@ async function runOptions() {
       if (args.check && !loadEnv().allSet) { return; }
       if (!args.run) { return; }
 
-      await runSteps({ offsetID: args.offsetID.value, dryRun: args.dryRun.value });
+      await runSteps({ offsetID: args.initialStepID.value, dryRun: args.dryRun.value });
     },
   };
 
