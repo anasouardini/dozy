@@ -9,14 +9,14 @@
  *     - lets you add profiles/categories so you can use the same script for all of your machines
  *   - future-proof:
  *     - it makes sure each step has its dependency-steps defined to protect against future modifications
- *     - TODO: detects modification of each step to notify you of updating steps dependent on it
+ *     - TODO: detects modification of each step to notify you to update steps that depend on it
  *   - non-blocking
  *     - it lets you use your Desktop ASAP before it continues the installtion after booting
  *       the rest of the installation is going to be done in a GUI terminal unless choosen otherwise
  *   - easily-debuggable:
  *     - keeps log of every errored step
  *     - lets you add a check-command for each command for better failure detection
- *     - TODO: stops steps from running if the dependencies of which have failed
+ *     - stops steps from running if the dependencies of which have failed
  *     - TODO: lets you replay failing steps or any step by its ID
  */
 
@@ -174,16 +174,16 @@ interface Print {
 }
 const print: Print = {
   title: (msg: string) => {
-    console.log(`\x1b[33m${msg}\x1b[0m`);
+    console.log(`\x1b[33m[*] ${msg}\x1b[0m`);
   },
   error: (msg: string) => {
-    console.log(`\x1b[31m${msg}\x1b[0m`);
+    console.log(`\x1b[31m[X] ${msg}\x1b[0m`);
   },
   success: (msg: string) => {
-    console.log(`\x1b[32m${msg}\x1b[0m`);
+    console.log(`\x1b[32m[✅] ${msg}\x1b[0m`);
   },
   info: (msg: string) => {
-    console.log(`\x1b[34m${msg}\x1b[0m`);
+    console.log(`\x1b[34m[!] ${msg}\x1b[0m`);
   },
 };
 
@@ -1727,6 +1727,10 @@ const argsShortHand = {
   h: 'help',
   d: 'dryRun',
   l: 'list',
+  a: 'listApps',
+  s: 'listDisabledSteps',
+  c: 'check',
+  o: 'offsetID',
 };
 
 interface Arg<VT> {
@@ -1793,8 +1797,8 @@ function handleSqueezedFlags(argsString) {
 function handleShortArgs(args: string) {
   if (args.includes(':')) {
     // there is no squeezing for key-value
-    if (args.length > 2) {
-      let errorMsg = 'Err: No squeezing for key-value pairs!';
+    if (args.split(":")[0].length > 2) {
+      let errorMsg = 'Err: No squeezing for key-value pairs! E.g: -lk:v (cannot know which key has that value "v")';
       errorMsg +=
         "\nIf you intend to shorthand a key-value argument, make sure there is only one letter after '-' and before ':'";
       errorMsg += `\nThe flawed argument: ${args}`;
@@ -1844,10 +1848,10 @@ function parseAdHocArgs() {
  * @description args example: CMD argument:value -arg:value -arg.
  */
 function parseArgs() {
-  // depending on whether you use nodejs or deno: in deno use 0, in nodejs use 2
-  const argsStartIndex = 0;
+  const argsStartIndex_NODE = 2;
+  const argsStartIndex_DENO = 0;
   process.args
-    .slice(argsStartIndex)
+    .slice(argsStartIndex_DENO)
     .forEach(
       (optionArg: string) => {
         if (optionArg.includes('-')) {
@@ -1863,16 +1867,7 @@ function parseArgs() {
   return defaultArgs;
 }
 
-const main = async () => {
-  // validate steps
-  const stepValidationOutput = validateSteps();
-  if (!stepValidationOutput.status) {
-    console.error(`[!] Unmet Dependencies!`);
-    throw Error(`${stepValidationOutput.error}`);
-  }
-  console.log("[✅] all steps are valid")
-  // process.exit();//just in case
-
+async function runOptions() {
   // apply CLI args/options
   const args = parseArgs();
   console.log(args);
@@ -1905,6 +1900,8 @@ const main = async () => {
           }`,
         );
       });
+
+      // process.exit(); // avoid running steps when a list of steps is requested
     },
     help: () => {
       print.info(`all args are key-value pairs (key:value), if the value is a boolean of true, you just type its key without the ':'`);
@@ -1913,7 +1910,7 @@ const main = async () => {
       print.info(`e.g: deno run --allow-all script-path dryRun`);
       print.info(`Options: ${Object.keys(defaultArgs).join(", ")}`);
 
-      process.exit(); // avoid running steps when "help" is requested
+      // process.exit(); // avoid running steps when "help" is requested
     },
     run: async () => {
       if (args.check && !loadEnv().allSet) { return; }
@@ -1930,7 +1927,18 @@ const main = async () => {
       await options[argKey]();
     }
   }
+}
 
+const main = async () => {
+  // validate steps
+  const stepValidationOutput = validateSteps();
+  if (!stepValidationOutput.status) {
+    print.error(`Unmet Dependencies!`);
+    throw Error(`${stepValidationOutput.error}`);
+  }
+  print.success("all steps are valid")
+
+  await runOptions();
 };
 
 // ----------------- ENTRY POINT
