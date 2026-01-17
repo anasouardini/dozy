@@ -14,6 +14,7 @@
  *     - it lets you use your Desktop ASAP before it continues the installtion after booting
  *       the rest of the installation is going to be done in a GUI terminal unless choosen otherwise
  *   - easily-debuggable:
+ *     - halts when an "envCheck" step isn't successful
  *     - keeps log of every errored step
  *     - lets you add a check-command for each command for better failure detection
  *     - stops steps from running if the dependencies of which have failed
@@ -63,6 +64,8 @@
 // [ ] add "fix mode": go over the unsuccessful steps
 // [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
 // [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
+// [ ] support testing steps inside containers or chrooted-into filesystems
+//     perhaps the container would have a mirror cache for speeding up some tests
 
 import fs from 'node:fs';
 import util from 'node:util';
@@ -79,7 +82,7 @@ interface Drive {
 }
 interface Config {
   username: string;
-  bkp: {
+  home: {
     drives: Record<'D' | 'D2', Drive>;
     directory: string;
     installScriptUrl: string;
@@ -115,10 +118,11 @@ interface Config {
   installCommandPrefix: string;
   failedCmds: Record<string, string>; // {"substepID": "Failing Command"}
   failedCheckCmds: Record<string, string>; // {"substepID": "Failing Check Command"}
+  predefinedIDs: Record<string, string>
 }
 const config: Config = {
   username: 'venego',
-  bkp: {
+  home: {
     drives: {
       D: { serial: 'ZA465ASK', mountPath: '/media/D' },
       D2: { serial: '23SBW0CAT', mountPath: '/media/D2' }
@@ -160,9 +164,10 @@ const config: Config = {
   installCommandPrefix: "sudo apt-get install -y",
   failedCmds: {},
   failedCheckCmds: {},
+  predefinedIDs: { envSetup: "envSetup" }
 };
-config.bkp.repo.localURI = `${config.bkp.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
-config.path.log = `${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/${config.username}/postInstallation.log`;
+config.home.repo.localURI = `${config.home.drives.D.mountPath}/bkp/bkpRepos/.dotfiles.git`;
+config.path.log = `${config.home.drives.D.mountPath}/${config.home.directory}/home/${config.username}/postInstallation.log`;
 config.path.checkpointDaemon = `/home/${config.username}/.config/systemd/user/checkpoint.service`;
 config.path.checkpointScript = `/home/${config.username}/.config/systemd/user/checkpoint.sh`;
 
@@ -255,106 +260,93 @@ const command = (cmd: string, printOutput: boolean = false) => {
   }
 };
 
-interface EnvVars {
-  driveAttached: boolean;
-  driveMounted: boolean;
-  internetAvailable: boolean;
-}
-const envVars: EnvVars = {
-  driveAttached: true,
-  driveMounted: true,
-  internetAvailable: true,
-};
-const checkEnv = () => {
-  try {
-    command(`
-      BKP_DRIVE_ATTACHED=$(lsblk -o name,serial \\
-      | grep "${config.bkp.drives.D.serial}" \\
-      | awk '{print $2}'); \\
-      if [[ ! $BKP_DRIVE_ATTACHED == "${config.bkp.drives.D.serial}" ]];then \\
-        echo "err" >&2; \\
-      fi
-    `);
-  } catch (err) {
-    envVars.driveAttached = false;
-  }
+// interface CheckHomeDriveVars {
+//   driveAttached: boolean;
+//   driveMounted: boolean;
+// }
+// const checkHomeDriveVars: CheckHomeDriveVars = {
+//   driveAttached: true,
+//   driveMounted: true,
+// };
+// const checkHomeDrive = () => {
+//   try {
+//     command(`
+//       BKP_DRIVE_ATTACHED=$(lsblk -o name,serial \\
+//       | grep "${config.home.drives.D.serial}" \\
+//       | awk '{print $2}'); \\
+//       if [[ ! $BKP_DRIVE_ATTACHED == "${config.home.drives.D.serial}" ]];then \\
+//         echo "err" >&2; \\
+//       fi
+//     `);
+//   } catch (err) {
+//     checkHomeDriveVars.driveAttached = false;
+//   }
 
-  try {
-    command(`
-      OUTPUT=$(lsblk -o mountpoints,name,serial); \\
-      DRIVE_NAME=$(printf "$OUTPUT" \\
-         | grep "${config.bkp.drives.D.serial}" \\
-         | awk '{print $1}'); \\
-      # BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
-      #  | grep "└─"$DRIVE_NAME \\
-      #  | awk '{print $1}'); \\
-        BKP_DRIVE_MOUNT=$(mount \\
-         | grep $DRIVE_NAME \\
-         | grep "${config.bkp.drives.D.mountPath}");
-      if [[ -z $BKP_DRIVE_MOUNT ]]; then \\
-        echo "err" >&2; \\
-      fi
-    # if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
-    #   echo "err" >&2; \\
-    # fi
-    `);
-  } catch (err) {
-    envVars.driveMounted = false;
-  }
+//   try {
+//     command(`
+//       OUTPUT=$(lsblk -o mountpoints,name,serial); \\
+//       DRIVE_NAME=$(printf "$OUTPUT" \\
+//          | grep "${config.home.drives.D.serial}" \\
+//          | awk '{print $1}'); \\
+//       # BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
+//       #  | grep "└─"$DRIVE_NAME \\
+//       #  | awk '{print $1}'); \\
+//         BKP_DRIVE_MOUNT=$(mount \\
+//          | grep $DRIVE_NAME \\
+//          | grep "${config.home.drives.D.mountPath}");
+//       if [[ -z $BKP_DRIVE_MOUNT ]]; then \\
+//         echo "err" >&2; \\
+//       fi
+//     # if [[ ! $BKP_DRIVE_MOUNT == "${config.home.drives.D.mountPath}" ]]; then \\
+//     #   echo "err" >&2; \\
+//     # fi
+//     `);
+//   } catch (err) {
+//     checkHomeDriveVars.driveMounted = false;
+//   }
 
-  try {
-    command(`
-      ping -c 1 1.1.1.1; \\
-      if [[ ! $? == 0 ]]; then \\
-        echo "err" >&2; \\
-      fi
-    `);
-  } catch (err) {
-    envVars.internetAvailable = false;
-  }
+//   return {
+//     allSet: Object.values(checkHomeDriveVars).every((val) => val == true),
+//     // allSet: true,
+//     env: checkHomeDriveVars,
+//   };
+// };
 
-  return {
-    allSet: Object.values(envVars).every((val) => val == true),
-    // allSet: true,
-    env: envVars,
-  };
-};
+// const loadHomeDrive = () => {
+//   print.info('checking home drive...');
+//   if (!checkHomeDrive().allSet) {
+//     if (checkHomeDriveVars.driveAttached && !checkHomeDriveVars.driveMounted) {
+//       try {
+//         command(`
+//           OUTPUT=$(lsblk -o mountpoints,name,serial); \\
+//           DRIVE_NAME=$(printf "$OUTPUT" \\
+//             | grep "${config.home.drives.D.serial}" \\
+//             | awk '{print $1}'); \\
+//           BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
+//             | grep "└─"$DRIVE_NAME \\
+//             | awk '{print $1}'); \\
+//           if [[ ! $BKP_DRIVE_MOUNT == "${config.home.drives.D.mountPath}" ]]; then \\
+//             sudo mkdir -p "${config.home.drives.D.mountPath}"; \\
+//             sudo mount "/dev/"$DRIVE_NAME"1" "${config.home.drives.D.mountPath}"; \\
+//           fi; \\
+//           if [[ ! $? == 0 ]]; then \\
+//             echo "err" >&2; \\
+//           fi
+//         `);
+//         checkHomeDriveVars.driveMounted = true;
+//       } catch (err) {
+//         console.log(err);
+//       }
+//     }
+//   }
 
-const loadEnv = () => {
-  print.info('checking environment...');
-  if (!checkEnv().allSet) {
-    if (envVars.driveAttached && !envVars.driveMounted) {
-      try {
-        command(`
-          OUTPUT=$(lsblk -o mountpoints,name,serial); \\
-          DRIVE_NAME=$(printf "$OUTPUT" \\
-            | grep "${config.bkp.drives.D.serial}" \\
-            | awk '{print $1}'); \\
-          BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
-            | grep "└─"$DRIVE_NAME \\
-            | awk '{print $1}'); \\
-          if [[ ! $BKP_DRIVE_MOUNT == "${config.bkp.drives.D.mountPath}" ]]; then \\
-            sudo mkdir -p "${config.bkp.drives.D.mountPath}"; \\
-            sudo mount "/dev/"$DRIVE_NAME"1" "${config.bkp.drives.D.mountPath}"; \\
-          fi; \\
-          if [[ ! $? == 0 ]]; then \\
-            echo "err" >&2; \\
-          fi
-        `);
-        envVars.driveMounted = true;
-      } catch (err) {
-        console.log(err);
-      }
-    }
-  }
+//   const checkHomeDriveEnvOutput = checkHomeDrive();
+//   if (!checkHomeDriveEnvOutput.allSet) {
+//     return checkHomeDriveEnvOutput;
+//   }
 
-  const env = checkEnv();
-  if (!env.allSet) {
-    return env;
-  }
-
-  return env;
-};
+//   return checkHomeDriveEnvOutput;
+// };
 
 function getUnifiedArray(itemOrArray: any | any[]) {
   if (Array.isArray(itemOrArray)) {
@@ -392,21 +384,104 @@ type Step = {
 // STAGE II: the rest of the setup (browser, vscode, clockify, nodejs, tsx)
 //         - TODO: make sure to inform the user when important steps are done
 let steps: Step[] = [
-  // first-essential
   {
-    title: `Checking if it's ran as root (which it shouldn't be!)`,
+    id: config.predefinedIDs.envSetup, // this id means that the script won't continue if this step isn't 100% successful
+    title: `checking the environment before running`,
     category: 'absolute',
     substeps: [
       {
+        id: config.predefinedIDs.envSetup + "-checkRoot",
+        title: `Checking if it's ran as root (which it shouldn't be!)`,
         cmd: [
-          //? do not run as root
-          //? you should have sudo installed and add your user to 'sudo' group
-          `[[ $(whoami) == "root" ]] && pkill deno; pkill node; pkill bun`,
-          // `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
+          //! do not run as root
+          //! you should have sudo installed and add your user to 'sudo' or 'wheel' group
+          `[[ $(whoami) == "root" ]] && echo "err" >&2; return -1`,
         ],
+      },
+      {
+        id: config.predefinedIDs.envSetup + "-checkInternet",
+        title: `Checking internet availability`,
+        cmd: [
+          // ccheck internet
+          `
+            # check internet \\
+            ping -c 1 1.1.1.1; \\
+            if [[ ! $? == 0 ]]; then \\
+              echo "err" >&2; return -1; \\
+            fi
+          `,
+        ],
+      },
+      {
+        id: config.predefinedIDs.envSetup + "-checkDNS",
+        title: `Checking domain resolution`,
+        cmd: [
+          // check domain resolution
+          `
+            # check domain resolution \\
+            ping -c 1 torproject.org; \\
+            if [[ ! $? == 0 ]]; then \\
+              echo "err" >&2; \\
+            fi
+          `,
+        ],
+      },
+      {
+        enabled: true,
+        id: config.predefinedIDs.envSetup + "-setupHomeDrive",
+        title: `setupHomeDrive`,
+        cmd: [
+          // mount home drive in order to get config files from it and use it as /home
+          `
+            # check if drive is physically attached \\
+            HOME_DRIVE_ATTACHED=$(lsblk -o name,serial \\
+              | grep "${config.home.drives.D.serial}" \\
+              | awk '{print $2}'); \\
+            if [[ ! $HOME_DRIVE_ATTACHED == "${config.home.drives.D.serial}" ]];then \\
+              echo "err" >&2; \\
+            fi \\
+            # get drive relative /dev/sdX path and mount it \\
+            OUTPUT=$(lsblk -o mountpoints,name,serial); \\
+            DRIVE_NAME=$(printf "$OUTPUT" \\
+              | grep "${config.home.drives.D.serial}" \\
+              | awk '{print $1}'); \\
+            BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
+              | grep "└─"$DRIVE_NAME \\
+              | awk '{print $1}'); \\
+            if [[ ! $BKP_DRIVE_MOUNT == "${config.home.drives.D.mountPath}" ]]; then \\
+              sudo mkdir -p "${config.home.drives.D.mountPath}"; \\
+              sudo mount "/dev/"$DRIVE_NAME"1" "${config.home.drives.D.mountPath}"; \\
+            fi; \\
+            if [[ ! $? == 0 ]]; then \\
+              echo "err" >&2; \\
+            fi
+          `,
+        ],
+        checkCmd: [
+          // check if drive is mounted
+          `
+            OUTPUT=$(lsblk -o mountpoints,name,serial); \\
+            DRIVE_NAME=$(printf "$OUTPUT" \\
+               | grep "${config.home.drives.D.serial}" \\
+               | awk '{print $1}'); \\
+            # BKP_DRIVE_MOUNT=$(printf "$OUTPUT" \\
+            #  | grep "└─"$DRIVE_NAME \\
+            #  | awk '{print $1}'); \\
+              BKP_DRIVE_MOUNT=$(mount \\
+               | grep $DRIVE_NAME \\
+               | grep "${config.home.drives.D.mountPath}");
+            if [[ -z $BKP_DRIVE_MOUNT ]]; then \\
+              echo "err" >&2; \\
+            fi
+            # if [[ ! $BKP_DRIVE_MOUNT == "${config.home.drives.D.mountPath}" ]]; then \\
+            #   echo "err" >&2; \\
+            # fi
+          `
+        ]
       },
     ],
   },
+
   {
     category: 'common',
     id: "data-transfer",
@@ -428,13 +503,13 @@ let steps: Step[] = [
       {
         title: 'restore apt config',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/apt /etc/`,
+          `sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/etc/apt /etc/`,
         ],
       },
       {
         title: 'restore keyrings for apt',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/usr/share/keyrings /usr/share/`,
+          `sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/usr/share/keyrings /usr/share/`,
           // `mkdir -p $HOME/.local/share;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$config.username/.local/share/keyrings $HOME/.local/share/`,
         ],
@@ -489,7 +564,7 @@ let steps: Step[] = [
       {
         title: 'copy mouse/keyboard config over',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/X11/xorg.conf.d /etc/X11/`,
+          `sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/etc/X11/xorg.conf.d /etc/X11/`,
         ],
       },
     ],
@@ -509,8 +584,8 @@ let steps: Step[] = [
     substeps: [
       {
         cmd: [
-          `ls /dev/disk/by-id | grep "${config.bkp.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" ${config.bkp.drives.D.mountPath} ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
-          `echo "${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `ls /dev/disk/by-id | grep "${config.home.drives.D.serial}" | grep "part1" | awk '{print "/dev/disk/by-id/"$1" ${config.home.drives.D.mountPath} ext4 defaults,nofail 0 2"}' | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/homeSetup/home /home		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       }
     ],
@@ -606,7 +681,7 @@ let steps: Step[] = [
       {
         cmd: [
           // mount /home from 2nd drive
-          `sudo mount --bind ${config.bkp.drives.D.mountPath}/bkp/homeSetup/home /home`,
+          `sudo mount --bind ${config.home.drives.D.mountPath}/bkp/homeSetup/home /home`,
 
           // disable login prompt for the 2nd half of the installation to go without interruption
           // `sudo systemctl disable getty@tty1.service`,
@@ -643,7 +718,7 @@ let steps: Step[] = [
           `echo "while ! pgrep -x i3 > /dev/null; do sleep 1; done;" | tee -a ${config.path.checkpointScript}`,
           // empty terminal. At first boot, there are no keybindings
           `echo "/usr/bin/alacritty&\n" | tee -a ${config.path.checkpointScript}`,
-          `echo "/usr/bin/alacritty --hold -e zsh -c 'bash <(curl -sfSL ${config.bkp.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}'" | tee -a ${config.path.checkpointScript}`,
+          `echo "/usr/bin/alacritty --hold -e zsh -c 'bash <(curl -sfSL ${config.home.installScriptUrl}) run offsetID:${config.defaults.proceedAfterRebootStepID}'" | tee -a ${config.path.checkpointScript}`,
           // `echo "sudo systemctl enable getty@tty1.service" | tee -a ${config.path.checkpointScript}`,
           `echo "restoring login prompt, after 2nd half of post-installation is done" | tee -a ${config.path.checkpointScript}`,
           `echo "sudo rm -rf \"${config.path.tty1ServiceConfig}\"" | tee -a ${config.path.checkpointScript}`,
@@ -737,7 +812,7 @@ let steps: Step[] = [
           make && sudo make install; \\
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
           sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/etc/keyd/default.conf /etc/keyd/;
           `,
         ],
       },
@@ -810,7 +885,7 @@ let steps: Step[] = [
           // this needs password input, leave it within early steps
           'flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo',
           'sudo mount --bind /media/D/bkp/flatpak /var/lib/flatpak',
-          `echo "${config.bkp.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/flatpak /var/lib/flatpak		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ],
       },
       {
@@ -818,7 +893,7 @@ let steps: Step[] = [
         cmd: [
           'yes | sh <(curl -L https://nixos.org/nix/install) --daemon',
           'sudo mount --bind /media/D/bkp/nix/store /nix/store',
-          `echo "${config.bkp.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/nix/store /nix/store		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ],
       },
     ],
@@ -878,7 +953,7 @@ let steps: Step[] = [
         title: 'mysql DBs restore',
         cmd: [
           'sudo mount --bind /media/D/bkp/bkpos/var/lib/mysql /var/lib/mysql',
-          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/mysql	/var/lib/mysql	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/bkpos/var/lib/mysql	/var/lib/mysql	ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       },
       {
@@ -1062,14 +1137,14 @@ let steps: Step[] = [
         apps: ['vnstat'],
         cmd: [
           'sudo mount --bind /media/D/bkp/bkpos/var/lib/vnstat /var/lib/vnstat',
-          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       },
       {
         title: 'setting dns',
         cmd: [
           'echo "nameserver 1.1.1.1" | sudo tee /etc/resolv.conf',
-          `echo "${config.bkp.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
+          `echo "${config.home.drives.D.mountPath}/bkp/bkpos/var/lib/vnstat	/var/lib/vnstat		ext4 defaults,nofail,bind	0	2" | sudo tee -a /etc/fstab`,
         ]
       }
     ],
@@ -1303,7 +1378,7 @@ let steps: Step[] = [
           make && sudo make install; \\
           sudo systemctl enable keyd && sudo systemctl start keyd; \\
           sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/etc/keyd/default.conf /etc/keyd/;
+          sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/etc/keyd/default.conf /etc/keyd/;
           `,
         ],
       },
@@ -1426,7 +1501,7 @@ let steps: Step[] = [
     substeps: [
       {
         cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/$USER/* $HOME/;`,
+          `sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/home/$USER/* $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/home $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.config $HOME/;`,
           // `sudo rsync -avh ${config.bkp.drive.mountPath}/${config.bkp.directory}/home/$USER/.vscode $HOME/;`,
@@ -1445,31 +1520,31 @@ let steps: Step[] = [
       {
         title: 'restore ssh keys',
         cmd: [
-          `sudo rsync -avh ${config.bkp.drives.D.mountPath}/${config.bkp.directory}/home/$USER/.ssh $HOME/`,
+          `sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/home/$USER/.ssh $HOME/`,
         ],
       },
       {
         title: 'backing up any old .dotfiles',
         cmd: [
-          `[ -d ${config.bkp.dotfiles.path} ] && mv ${config.bkp.dotfiles.path} ${config.bkp.dotfiles.path}-bkp`,
+          `[ -d ${config.home.dotfiles.path} ] && mv ${config.home.dotfiles.path} ${config.home.dotfiles.path}-bkp`,
         ],
       },
       {
         title: 'cloning the dotfiles repo',
         cmd: [
-          `git clone --bare ${config.bkp.repo.localURI} ${config.bkp.dotfiles.path}`,
+          `git clone --bare ${config.home.repo.localURI} ${config.home.dotfiles.path}`,
         ],
       },
       {
-        title: `checkout ${config.bkp.dotfiles.path} after backing up existing dotfiles`,
+        title: `checkout ${config.home.dotfiles.path} after backing up existing dotfiles`,
         cmd: [
-          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME checkout -f;`,
+          `git --git-dir=${config.home.dotfiles.path} --work-tree=$HOME checkout -f;`,
         ],
       },
       {
         title: 'hiding untracked files',
         cmd: [
-          `git --git-dir=${config.bkp.dotfiles.path} --work-tree=$HOME config --local status.showUntrackedFiles no`,
+          `git --git-dir=${config.home.dotfiles.path} --work-tree=$HOME config --local status.showUntrackedFiles no`,
         ],
       },
     ],
@@ -1486,19 +1561,35 @@ let manualSteps = [
 if (config.fakeRun) {
   steps = [
     {
-      title: `Checking if it's ran as root (which it shouldn't be!)`,
+      id: config.predefinedIDs.envSetup, // this id means that the script won't continue if this step isn't 100% successful
+      title: `checking the environment before running`,
       category: 'absolute',
       substeps: [
         {
+          id: config.predefinedIDs.envSetup + "-checkRoot",
+          title: `Checking if it's ran as root (which it shouldn't be!)`,
           cmd: [
-            //? do not run as root
-            //? you should have sudo installed and add your user to 'sudo' group
-            `[[ $(whoami) == "root" ]] && pkill deno; pkill node; pkill bun`,
-            // `[[ ! "$(pgrep -x sudo)" ]] && sudo pkill deno; sudo pkill node; sudo pkill bun`
+            //! do not run as root
+            //! you should have sudo installed and add your user to 'sudo' or 'wheel' group
+            `[[ $(whoami) == "root" ]] && echo "err" >&2; return -1`,
+          ],
+        },
+        {
+          id: config.predefinedIDs.envSetup + "-checkInternet",
+          title: `Checking internet availability`,
+          cmd: [
+            `
+            # check internet \\
+            ping -c 1 1.1.1.1; \\
+            if [[ ! $? == 0 ]]; then \\
+              echo "err" >&2; return -1; \\
+            fi
+          `,
           ],
         },
       ],
     },
+
     {
       title: `a failing step`,
       category: 'common',
@@ -1684,6 +1775,19 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
         print.error(`[!] dependencies: ${substep.dependsOn}`);
       }
 
+      function handleCMDFailure({ failedCMD, failedList }: { failedCMD: string, failedList: Record<string, string> }): { shouldHalt: boolean } {
+        failedList[substep.id ?? `${step.id ?? `no-id_${Math.random()}`} > no-id_${Math.random()}`] = failedCMD;
+        if (
+          step.id == config.predefinedIDs.envSetup
+          || substep.id == config.predefinedIDs.envSetup
+        ) {
+          print.error(`A step/substep with id="${config.predefinedIDs.envSetup}" has failed its command check, halting everything`)
+          print.error(`Failed substep CMD:\n${failedCMD}`)
+          print.error(`All Failed CMDs:\n${JSON.stringify(failedList, null, 2)}`)
+          return { shouldHalt: true }
+        }
+        return { shouldHalt: false }
+      }
       function commandWrapper(commandString: string, logCB: (err: unknown) => any) {
         try {
           command(commandString);
@@ -1693,13 +1797,20 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
               try {
                 command(checkCmdLine)
               } catch (err) {
-                config.failedCheckCmds[substep.id ?? `no-id_${Math.random()}`] = checkCmdLine;
+                log({
+                  orderStr: `Substep: ${substepIndex + 1}/${substepsList.length}`,
+                  title: `${substep.id ?? "no ID"} | ${substep.title ?? "no title"}`,
+                  msg: `Prior command went successfully but its check command was not satisfied\nErr: ${err}`,
+                });
+                const isShouldHalt = handleCMDFailure({ failedCMD: checkCmdLine, failedList: config.failedCheckCmds });
+                if (isShouldHalt) { process.exit(-1); }
               }
             })
           }
         } catch (err) {
-          config.failedCmds[substep.id ?? `no-id_${Math.random()}`] = commandString;
           logCB(err);
+          const isShouldHalt = handleCMDFailure({ failedCMD: commandString, failedList: config.failedCmds });
+          if (isShouldHalt) { process.exit(-1); }
         }
       }
 
@@ -1773,7 +1884,7 @@ const argsShortHand = {
   l: 'list',
   a: 'listApps',
   s: 'listDisabledSteps',
-  c: 'check',
+  // c: 'check',
   o: 'offsetID',
 };
 
@@ -1786,7 +1897,7 @@ interface Arg<VT> {
 type Args = {
   help: Arg<boolean>,
   run: Arg<boolean>,
-  check: Arg<boolean>,
+  // check: Arg<boolean>,
   dryRun: Arg<boolean>,
   fakeRun: Arg<boolean>,
   list: Arg<boolean>,
@@ -1805,10 +1916,10 @@ const defaultArgs: Args = {
     value: false,
     isMethod: true,
   },
-  check: {
-    value: true,
-    dependencyOf: ['run'],
-  },
+  // check: {
+  //   value: true,
+  //   dependencyOf: ['run'],
+  // },
   dryRun: {
     value: false,
     dependencyOf: ['run'],
@@ -1837,7 +1948,7 @@ const defaultArgs: Args = {
   },
 } as const;
 
-function handleSqueezedFlags(argsString) {
+function handleSqueezedFlags(argsString:string) {
   const shortArgsList = argsString.split('-')[1].split('');
   for (const shortArg of shortArgsList) {
     defaultArgs[argsShortHand[shortArg]].value = true;
@@ -1921,14 +2032,14 @@ async function runOptions() {
   const args = parseArgs();
   console.log(args);
 
-  if (args.check) {
-    print.info('setting up environment...');
-    const env = loadEnv();
-    console.log(env)
-    if (!env.allSet) {
-      throw Error(`The environment wasn't setup!\n${env}`);
-    }
-  }
+  // if (args.check) {
+  //   print.info('setting up environment...');
+  //   const env = loadHomeDrive();
+  //   console.log(env)
+  //   if (!env.allSet) {
+  //     throw Error(`The environment wasn't setup!\n${env}`);
+  //   }
+  // }
 
   const options: { [key: string]: ((args?: any) => any) | ((args?: any) => Promise<any>) } = {
     // list steps
@@ -1962,7 +2073,7 @@ async function runOptions() {
       // process.exit(); // avoid running steps when "help" is requested
     },
     run: async () => {
-      if (args.check && !loadEnv().allSet) { return; }
+      // if (args.check && !loadHomeDrive().allSet) { return; }
       if (!args.run) { return; }
 
       await runSteps({ offsetID: args.initialStepID.value, dryRun: args.dryRun.value });
