@@ -1,6 +1,6 @@
 /**
- * This script is not a simple "use-once" post-installation script, it has some cool features for easy debuging and modifing down the road.
- * Feature include:
+ * This script is not a simple "use-once" post-installation script, it has some cool features for easy debuging and modification down the road.
+ * Features include:
  *   - organized:
  *     - the installation is split into steps and substeps
  *     - e.g.: install package A, enable its daemon, copy its configs and insert its
@@ -11,8 +11,9 @@
  *     - it makes sure each step has its dependency-steps defined to protect against future modifications
  *     - TODO: detects modification of each step to notify you to update steps that depend on it
  *   - non-blocking
- *     - it lets you use your Desktop ASAP before it continues the installtion after booting
- *       the rest of the installation is going to be done in a GUI terminal unless choosen otherwise
+ *     - it boots into a functioning Desktop ASAP with minimal installation then continues the installtion
+ *       the rest of the installation is going to be continued (automatically) in a GUI terminal
+ *       so you can observe what's happening and use apps as soon as they get installed
  *   - easily-debuggable:
  *     - halts when an "envCheck" step isn't successful
  *     - keeps log of every errored step
@@ -25,27 +26,24 @@
 // --------------------- TODO --------------------
 // -----------------------------------------------
 
-// add fix for random wifi interface naming
+// --------- add fix for random wifi interface naming
 // echo 'GRUB_CMDLINE_LINUX="net.ifnames=0 biosdevname=0"' | sudo tee -a /etc/default/grub
 // sudo update-grub
 // echo "reboot and you're good to go"
 
 // Enhancement
 // [X] reduce steps in 1st stage (before reboot)
-// [ ] the logic of the 2 phases should be abstracted from steps
-//   - the steps should only contain hints about phase order and reboot.
+// [ ] the logic of the 2 phases should be abstracted from steps.
+//     the steps should only contain hints about phase order and reboot.
 //     runSteps() should see the reboot hint and plant a hook (systemd daemon)
 //     to continue from where it was left off after boot
 // [ ] add a notification system so you can inform the user
-//   - when important steps are done
+//     when important steps are done
 
 // FEAT
+// [X] don't run the step which its depenency was not successful.
 // [X] specify whether a step is a dependency for another
-//   [ ] use the feature on all steps that need it
 // [X] checkCmd for failing steps
-//   [ ] use checkCmd to add failure check logic for all steps (really hard)
-// [ ] add undo function for each step.
-// [ ] don't run the step which its depenency was not successful.
 // [ ] remind the user to check dependent steps if their dependency has been changed
 //   - this requires lots of non-standard meta-programming for generating hashes of steps, etc
 
@@ -55,15 +53,22 @@
 
 // UX
 // [ ] interactive configuration
-// [ ] open a tmux session with two panes: 1st for output of this script
+// [ ] in tty, open a tmux session with two panes: 1st for output of this script
 //     and 2nd with output from shell commands
+//     if in a terminal, use antoher instance for the shell commands
+
+// user-side enhancements
+// [ ] add undo function for each step.
+// [ ] use the step dependency feature on all steps that need it
+// [ ] use checkCmd to add failure check logic for all steps if possible
+// [ ] implement dry-run custom to each step.
+//     e.g.: check if app already exists, non-existing path,
+//           disabled daemon, incompatible shell, etc
 
 // DEBUGGING
-// [ ] option to go through each step and prompt for "yes/no"
+// [ ] option to go through each step and prompt for "run/skip"
 // [ ] option to run a step/sub-step by providing its order value in args
 // [ ] add "fix mode": go over the unsuccessful steps
-// [ ] dry-run should tell you if you already have the app installed, configuration done, or file doesn't exist.
-// [ ] dry-run should tell you if the command or app is invalid; use the built-in dry-run of apps like rsync
 // [ ] support testing steps inside containers or chrooted-into filesystems
 //     perhaps the container would have a mirror cache for speeding up some tests
 
