@@ -87,6 +87,7 @@ interface Drive {
 }
 interface Config {
   username: string;
+  hostname: string;
   home: {
     drives: Record<'D' | 'D2', Drive>;
     directory: string;
@@ -127,6 +128,7 @@ interface Config {
 }
 const config: Config = {
   username: 'venego',
+  hostname: 'Galaxy-A03s',
   home: {
     drives: {
       D: { serial: 'ZA465ASK', mountPath: '/media/D' },
@@ -155,7 +157,7 @@ const config: Config = {
   },
   defaults: {
     template: 'desktop',
-    proceedAfterRebootStepID: '',
+    proceedAfterRebootStepID: 'pickUpDummyStep',
     terminal: 'alacritty',
     modes: {
       desktop: {
@@ -521,7 +523,20 @@ let steps: Step[] = [
       },
       {
         title: 'updating repositories',
-        cmd: ['sudo apt-get update -y;'],
+        cmd: ['sudo apt-get update -y; echo "success (apt update gives an error code when it is not an error)"'],
+      },
+    ],
+  },
+  {
+    title: 'set hostname',
+    category: 'common',
+    substeps: [
+      {
+        cmd: [
+          `echo "${config.hostname}" | sudo tee /etc/hostname`,
+          `echo "127.0.0.1 localhost" | sudo tee /etc/hosts`,
+          `echo "127.0.0.1 ${config.hostname}.${config.domain} ${config.hostname}" | sudo tee -a /etc/hosts`,
+        ],
       },
     ],
   },
@@ -554,10 +569,11 @@ let steps: Step[] = [
     substeps: [
       {
         cmd: [
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/systemctl suspend, /usr/sbin/rtcwake, /usr/bin/sleep, /usr/bin/chvt, /usr/bin/pkill" | sudo tee -a /etc/sudoers;',
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl start mysql" | sudo tee -a /etc/sudoers;',
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/airmon-ng, /sbin/aireplay-ng, /sbin/airodump-ng" | sudo tee -a /etc/sudoers;',
-          'echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/macchanger, /usr/sbin/ifconfig, /usr/sbin/arp-scan" | sudo tee -a /etc/sudoers;',
+          '# echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/reboot, /sbin/shutdown, /sbin/poweroff, /usr/bin/systemctl suspend, /usr/sbin/rtcwake, /usr/bin/sleep, /usr/bin/chvt, /usr/bin/pkill" | sudo tee -a /etc/sudoers;',
+          '# echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/systemctl start mysql" | sudo tee -a /etc/sudoers;',
+          '# echo "$USER ALL=(ALL:ALL) NOPASSWD: /sbin/airmon-ng, /sbin/aireplay-ng, /sbin/airodump-ng" | sudo tee -a /etc/sudoers;',
+          '# echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/macchanger, /usr/sbin/ifconfig, /usr/sbin/arp-scan" | sudo tee -a /etc/sudoers;',
+          'echo "%sudo ALL=(ALL) NOPASSWD: ALL"',
         ],
       },
     ],
@@ -660,7 +676,7 @@ let steps: Step[] = [
         cmd: [
           'sudo swapoff -a',
           'sudo touch /swapfile',
-          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=8000',
+          'sudo dd if=/dev/zero of=/swapfile bs=1MB count=8000; echo "success (dd gives an error code when it is not an error)"',
           'sudo chmod 600 /swapfile',
           'sudo mkswap /swapfile',
           'sudo swapon /swapfile',
@@ -679,6 +695,7 @@ let steps: Step[] = [
   },
   // make checkpoint-daemon and checkpoint-script
   {
+    enabled: false,
     title: 'reboot into the 2nd half of installation',
     category: 'common',
     id: 'make_checkpoint_for_second_half',
@@ -736,17 +753,18 @@ let steps: Step[] = [
   },
   // the prior step will hopefully reboot before reaching this step
   // but keep the stopper step in here just in case
-  {
-    category: 'common',
-    title: 'stopper',
-    id: 'stopper',
-    substeps: [],
-  },
+  // {
+  //   category: 'common',
+  //   title: 'stopper',
+  //   id: 'stopper',
+  //   substeps: [],
+  // },
   // this step is ran by checkpoint-script after reboot
   {
+    id: config.defaults.proceedAfterRebootStepID,
+    enabled: false,
     title: 'picking installation from before rebooting',
     category: 'common',
-    id: config.defaults.proceedAfterRebootStepID,
     substeps: [
       {
         cmd: [
@@ -797,20 +815,10 @@ let steps: Step[] = [
         apps: ['sxhkd'],
       },
       {
-        title: 'installing keyboard key mapper (keyd)',
         enabled: false,
+        title: 'installing keyboard key mapper (keyd)',
         cmd: [
-          `
-          reposDIR="$HOME/repos"
-      	  mkdir -p $reposDIR;
-          DIR="$reposDIR/keyd"
-          DATE=$(date +%F)
-          if [ -d "$DIR" ]; then
-              NEW_DIR="$DIR""_""$DATE"
-              mv "$DIR" "$NEW_DIR"
-              echo "Directory renamed to: $NEW_DIR"
-          fi
-	        cd $reposDIR; \\
+          `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
           git clone https://github.com/rvaiya/keyd; \\
           sudo apt-get install gcc make -y; \\
           cd keyd; \\
@@ -851,8 +859,8 @@ let steps: Step[] = [
         title: 'installing keyboard key mapper (kanata)',
         cmd: [
           `
-          sudo cp $HOME/home/bin/kanata-cmd-allowed /usr/bin/
-          echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/kanata, /usr/bin/kanata-cmd-allowed" | sudo tee -a /etc/sudoers;
+          sudo cp $HOME/home/bin/_kanata_cmd_allowed_1_10_1 /usr/bin/
+          # echo "$USER ALL=(ALL:ALL) NOPASSWD: /usr/bin/kanata, /usr/bin/kanata-cmd-allowed" | sudo tee -a /etc/sudoers;
           `,
         ],
       },
@@ -884,7 +892,7 @@ let steps: Step[] = [
       },
       {
         id: 'flatpak',
-        title: "Installing and setting up flatpak",
+        title: 'Installing and setting up flatpak',
         apps: ['flatpak'],
         cmd: [
           // this needs password input, leave it within early steps
@@ -924,19 +932,19 @@ let steps: Step[] = [
     substeps: [
       {
         cmd: [
-          `
-            curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash; \\
-            export NVM_DIR="$HOME/.nvm"; \\
-            [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"; \\
-            [ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion"; \\
-            nvm i node; \\
-            nvm i 21; \\
-            sudo apt-get install npm -y; \\
-            sudo npm i -g corepack; \\
-            sudo npm i -g pnpm; \\
-            corepack enable; \\
-            pnpm i -g pnpm;
-          `,
+            'curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash',
+            'export NVM_DIR="$HOME/.nvm";',
+            '[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh";',
+            '[ -s "$NVM_DIR/bash_completion" ] && . "$NVM_DIR/bash_completion";',
+            'nvm i node;',
+            'nvm i 21;',
+            'corepack enable npm',
+            'corepack enable pnpm',
+            // 'sudo apt-get install npm -y;',
+            // 'sudo npm i -g corepack;',
+            // 'sudo npm i -g pnpm;',
+            // 'corepack enable;',
+            'pnpm self-update'
         ],
       },
     ],
@@ -1104,6 +1112,15 @@ let steps: Step[] = [
   },
   {
     category: 'common',
+    title: 'archiving',
+    substeps: [
+      {
+        apps: ['unzip'],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'better alternatives',
     substeps: [
       {
@@ -1179,14 +1196,17 @@ let steps: Step[] = [
     title: 'phone integration tools',
     substeps: [
       {
+	apps: [
+	  'ffmpeg', 'libsdl2-2.0-0', 'adb', 'wget',
+	  'gcc', 'git', 'pkg-config', 'meson',
+	  'ninja-build', 'libsdl2-dev',
+          'libavcodec-dev', 'libavdevice-dev', 'libavformat-dev', 'libavutil-dev',
+          'libswresample-dev', 'libusb-1.0-0', 'libusb-1.0-0-dev',
+	],
         cmd: [
-          `# for Debian/Ubuntu
-           sudo apt install ffmpeg libsdl2-2.0-0 adb wget \
-           gcc git pkg-config meson ninja-build libsdl2-dev \
-           libavcodec-dev libavdevice-dev libavformat-dev libavutil-dev \
-           libswresample-dev libusb-1.0-0 libusb-1.0-0-dev`,
           `
 	   cd ~/home/repos;
+	   mv scrcpy scrcpy-old;
 	   git clone https://github.com/Genymobile/scrcpy
            cd scrcpy
            ./install_release.sh`
@@ -1372,20 +1392,6 @@ let steps: Step[] = [
       {
         title: 'hot key daemon',
         apps: ['sxhkd'],
-      },
-      {
-        title: 'installing keyboard key mapper (keyd)',
-        cmd: [
-          `mkdir -p $HOME/Downloads; cd $HOME/Downloads; \\
-          git clone https://github.com/rvaiya/keyd; \\
-          sudo apt-get install gcc make -y; \\
-          cd keyd; \\
-          make && sudo make install; \\
-          sudo systemctl enable keyd && sudo systemctl start keyd; \\
-          sudo usermod -aG keyd $USER; \\
-          sudo rsync -avh ${config.home.drives.D.mountPath}/${config.home.directory}/etc/keyd/default.conf /etc/keyd/;
-          `,
-        ],
       },
       {
         enabled: false,
@@ -1628,6 +1634,7 @@ function validateSteps(): { status: true } | { status: false, error: any } {
   // main logic
   function recurse(steps: (Step | Step["substeps"][0])[]) {
     steps.forEach((step) => {
+	    // console.log(step.title, step.id)
 
       if (!step.id) {
         if (step.dependsOn) {
@@ -1747,7 +1754,7 @@ async function runSteps({ offsetID, dryRun }: RunStepsProps) {
     //   cond2: stepsVars.reachedOffsetID == false
     // });
     if (typeof offsetID == 'string' && stepsVars.reachedOffsetID == false) {
-      console.log('before offset', step.title)
+      console.log('before offset', {offsetID, stepID: step.id, stepTitle: step.title})
       if (offsetID != step.id) { continue; }
       stepsVars.reachedOffsetID = true;
     }
