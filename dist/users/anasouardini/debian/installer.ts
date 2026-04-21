@@ -974,6 +974,18 @@ let steps: Step[] = [
   },
   {
     category: 'common',
+    title: 'installing clockify',
+    substeps: [
+      {
+        apps: ["npm"],
+        cmd: [
+            'sudo npm i -g clockify',
+        ],
+      },
+    ],
+  },
+  {
+    category: 'common',
     title: 'databases',
     substeps: [
       {
