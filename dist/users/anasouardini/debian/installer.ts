@@ -815,6 +815,29 @@ let steps: Step[] = [
         apps: ['sxhkd'],
       },
       {
+        title: 'installing kb-driven mouse manipulation (warpd)',
+        apps: [
+	  'libxi-dev',
+	  'libxinerama-dev',
+	  'libxft-dev',
+	  'libxfixes-dev',
+	  'libxtst-dev',
+	  'libx11-dev',
+	  'libcairo2-dev',
+	  'libxkbcommon-dev',
+	  'libwayland-dev',
+        ],
+        cmd: [
+          `
+            cd $HOME/home/repos;
+            mv warp warpd-old;
+            git clone https://github.com/rvaiya/warpd.git
+            cd warpd
+            make && sudo make install
+          `,
+        ],
+      },
+      {
         enabled: false,
         title: 'installing keyboard key mapper (keyd)',
         cmd: [
