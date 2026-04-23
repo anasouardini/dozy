@@ -367,6 +367,7 @@ function getUnifiedArray(itemOrArray: any | any[]) {
 // ------------------------------------------------------------------
 
 type Category = 'absolute' | 'common' | 'homeServer' | 'desktop' | 'termux' | 'arch' | 'bro' | 'myDrive';
+// type SubstepCmd = string | {cmd: string, ignoreError: boolean};
 type Step = {
   enabled?: boolean;
   id?: string;
@@ -378,6 +379,7 @@ type Step = {
     id?: string;
     dependsOn?: string | string[];
     title?: string;
+    // cmd?: SubstepCmd | SubstepCmd[];
     cmd?: string | string[];
     apps?: string | string[];
     checkCmd?: string | string[]
@@ -826,14 +828,18 @@ let steps: Step[] = [
 	  'libcairo2-dev',
 	  'libxkbcommon-dev',
 	  'libwayland-dev',
+          'gcc-12',
+          'g++-12',
         ],
         cmd: [
           `
-            cd $HOME/home/repos;
-            mv warp warpd-old;
-            git clone https://github.com/rvaiya/warpd.git
-            cd warpd
-            make && sudo make install
+            warpdpath="$HOME/home/repos/warpd";
+            cd $warpdpath;
+            if [[ ! -d $warpdpath ]];then
+              git clone https://github.com/rvaiya/warpd.git
+            fi
+            cd $warpdpath
+            CC=gcc-12 make && sudo make install
           `,
         ],
       },
