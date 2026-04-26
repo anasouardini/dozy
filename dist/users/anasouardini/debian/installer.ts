@@ -1317,32 +1317,38 @@ let steps: Step[] = [
   {
     enabled: false,
     category: 'desktop',
-    title: 'virtualization',
+    title: 'virtualization -- qemu CLI-only',
     substeps: [
       {
-        title: 'Docker',
-        apps: ['docker.io', 'docker-compose'],
-      },
-      {
-        title: 'adding user to docker group',
-        cmd: [`sudo usermod -aG docker $USER`],
-      },
-      {
         title: 'qemu shared dependencies',
-        apps: ['qemu-system', 'libvirt-daemon-system'],
-      },
-      {
-        enabled: false, // enable when using CLI-only
-        title: 'qemu CLI dependencies - enable if you disable GUI client',
-        apps: ['libvirt-clients', 'qemu-utils', 'ovmf'],
+        apps: [
+          'qemu-system', // emulator
+          'libvirt-daemon-system' // VMs management interface
+        ],
       },
       {
         title: 'CLI client',
-        apps: ['virtinst'],
+        apps: [
+          // 'libvirt-clients', // installs virsh and other tools
+          'libvirt-clients-qemu', // installs virsh and other tools
+          'virt-install', // provisoning tool
+        ],
       },
       {
-        title: 'GUI client',
-        apps: ['virt-manager'],
+        title: 'qemu CLI utils',
+        apps: [
+          'qemu-utils',
+          'ovmf', // UEFI for Qemu
+          'qemu-img', // VM image tool
+          'qemu-nbd', // mount and manage block devices
+          // 'qemu-guest-agent',
+        ],
+      },
+      {
+        title: 'qemu libvirt RC',
+        apps: [
+          'virtproxyd', // remote control
+        ],
       },
       {
         title: 'qemu viewer',
@@ -1352,7 +1358,49 @@ let steps: Step[] = [
         title: 'adding user to libvirt groups',
         cmd: [`sudo usermod -aG libvirt,libvirt-qemu $USER`],
       },
+    ],
+  },
+  {
+    enabled: false,
+    category: 'desktop',
+    title: 'virtualization -- qemu gui',
+    substeps: [
       {
+        title: 'qemu shared dependencies',
+        apps: ['qemu-system', 'libvirt-daemon-system'],
+      },
+      {
+        title: 'GUI client',
+        apps: ['virt-manager'], // brings virt-viewer with it
+      },
+      {
+        title: 'adding user to libvirt groups',
+        cmd: [`sudo usermod -aG libvirt,libvirt-qemu $USER`],
+      },
+    ],
+  },
+  {
+    enabled: false,
+    category: 'desktop',
+    title: 'virtualization -- docker',
+    substeps: [
+      {
+        title: 'Docker',
+        apps: ['docker.io', 'docker-compose'],
+      },
+      {
+        title: 'adding user to docker group',
+        cmd: [`sudo usermod -aG docker $USER`],
+      },
+    ],
+  },
+  {
+    enabled: false,
+    category: 'desktop',
+    title: 'virtualization -- distrobox',
+    substeps: [
+      {
+        title: 'installing distrobox',
         apps: ['distrobox'],
       },
     ],
