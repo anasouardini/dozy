@@ -128,6 +128,11 @@ function install(){
   chroot $mountPath /bin/bash -c "printf "${defaultUserpass}\n${defaultUserpass}\n\n\n\n\n\n\n" | adduser ${defaultUsername}"
   chroot $mountPath /bin/bash -c "usermod -aG sudo ${defaultUsername}"
 
+  # cleanup
+  chroot $mountPath /bin/bash -c "apt clean"
+  chroot $mountPath /bin/bash -c "rm -f /etc/machine-id"
+  chroot $mountPath /bin/bash -c "truncate -s 0 /myrootfs/etc/machine-id"
+
   printGreen "Unounting ${chosenDevice}"
   umount -R $mountPath
 }

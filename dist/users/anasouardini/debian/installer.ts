@@ -1113,6 +1113,7 @@ let steps: Step[] = [
           // "obs-studio",
           // "cheese",
           'mpv',
+          'mp123', // I make a beep notification with it
           // 'mpd',
           // 'ncmpcpp',
           // 'mpc',
@@ -1337,10 +1338,10 @@ let steps: Step[] = [
       {
         title: 'qemu CLI utils',
         apps: [
-          'qemu-utils',
           'ovmf', // UEFI for Qemu
-          'qemu-img', // VM image tool
-          'qemu-nbd', // mount and manage block devices
+          'qemu-utils', // includes qemu-img and qemu-nbd 
+          // 'qemu-img', // VM image tool
+          // 'qemu-nbd', // mount and manage block devices
           // 'qemu-guest-agent',
         ],
       },
