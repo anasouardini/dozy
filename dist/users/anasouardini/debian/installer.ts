@@ -552,7 +552,17 @@ let steps: Step[] = [
     ],
   },
   {
-    title: 'disable beep sound',
+    title: 'set fonts',
+    category: 'common',
+    substeps: [
+      {
+        apps: ['fonts-noto-color-emoji'],
+        cmd: ['fc-cache -fv']
+      },
+    ],
+  },
+  {
+    title: '',
     category: 'common',
     substeps: [
       {
