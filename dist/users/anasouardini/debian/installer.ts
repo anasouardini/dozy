@@ -810,7 +810,7 @@ let steps: Step[] = [
       },
       {
         title: 'app luncher and menu',
-        apps: ['suckless-tools', /*'rofi'*/],
+        apps: ['suckless-tools', 'rofi'],
       },
       {
         title: 'hot key daemon',
