@@ -117,7 +117,7 @@ function install(){
   chroot $mountPath /bin/bash -c "grub-install ${chosenDevice} && update-grub"
 
   # printGreen "Installing standard utils"
-  chroot $mountPath /bin/bash -c "tasksel insatll standard"
+  chroot $mountPath /bin/bash -c "apt-get install tasksel; tasksel install standard"
 
   # literally repeating the password twice using echo :)
   printGreen "setting password for root"

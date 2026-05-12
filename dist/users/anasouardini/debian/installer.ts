@@ -955,7 +955,7 @@ let steps: Step[] = [
     title: 'browsers',
     substeps: [
       {
-        apps: ['brave-browser'],
+        apps: ['brave-browser', 'torbrowser-launcher'],
       },
       {
         // essential setup shouldn't install these
