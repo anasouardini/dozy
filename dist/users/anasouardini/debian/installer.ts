@@ -849,6 +849,7 @@ let steps: Step[] = [
             if [[ ! -d $warpdpath ]];then
               git clone https://github.com/rvaiya/warpd.git
               cd $warpdpath
+
               CC=gcc-12 make && sudo make install
             fi
           `,
@@ -1538,6 +1539,12 @@ let steps: Step[] = [
     substeps: [
       {
         title: "newsraft",
+        apps: [
+          'libcurl4-openssl-dev',
+          'libexpat1-dev',
+          'libsqlite3-dev',
+          'libgumbo-dev'
+        ],
         cmd: [
           `
             repos="$HOME/home/repos";
