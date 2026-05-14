@@ -843,13 +843,14 @@ let steps: Step[] = [
         ],
         cmd: [
           `
-            warpdpath="$HOME/home/repos/warpd";
-            cd $warpdpath;
+            repos="$HOME/home/repos";
+            cd $repos;
+            warpdpath="$repos/warpd";
             if [[ ! -d $warpdpath ]];then
               git clone https://github.com/rvaiya/warpd.git
+              cd $warpdpath
+              CC=gcc-12 make && sudo make install
             fi
-            cd $warpdpath
-            CC=gcc-12 make && sudo make install
           `,
         ],
       },
@@ -874,7 +875,7 @@ let steps: Step[] = [
         cmd: [
           `
           reposDIR="$HOME/repos"
-	        mkdir -p $reposDIR;
+	  mkdir -p $reposDIR;
           DIR="$reposDIR/kmonad"
           DATE=$(date +%F)
           if [ -d "$DIR" ]; then
@@ -1527,6 +1528,27 @@ let steps: Step[] = [
 	         rustup update; \\
 	         cargo install --locked yazi-fm yazi-cli;`,
           `which nix-env && [[ $? ]] && timeout 60 nix-env -iA nixpkgs.ueberzugpp`
+        ]
+      },
+    ],
+  },
+  {
+    category: 'desktop',
+    title: 'RSS reader',
+    substeps: [
+      {
+        title: "newsraft",
+        cmd: [
+          `
+            repos="$HOME/home/repos";
+            cd $repos;
+            newsraft="$repos/newsraft";
+            if [[ ! -d $newsraft ]];then
+              git clone https://salsa.debian.org/debian/newsraft
+              cd $newsraft
+              make; make install;
+            fi
+          `
         ]
       },
     ],
