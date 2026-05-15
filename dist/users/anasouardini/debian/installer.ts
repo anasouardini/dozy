@@ -1051,6 +1051,10 @@ let steps: Step[] = [
         ],
       },
       {
+        title: 'neovim',
+        apps: ['neovim'],
+      },
+      {
         title: '',
         apps: ['code'],
       },
