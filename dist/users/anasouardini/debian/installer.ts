@@ -1565,12 +1565,18 @@ let steps: Step[] = [
     ],
   },
   {
-    enabled: false,
     category: 'desktop',
     title: 'mail client',
     substeps: [
       {
+        enabled: false,
         apps: ['thunderbird'],
+      },
+      {
+        apps: [
+          'aerc', // minimal TUI client
+          'isync' // minimal mail downloader, I use it for the RSS reader
+        ],
       },
     ],
   },
